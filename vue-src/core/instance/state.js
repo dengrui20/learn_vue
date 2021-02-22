@@ -266,22 +266,12 @@ function createComputedGetter (key) {
         watcher.evaluate()
       }
       if (Dep.target) {
-        // 如 fullname 依赖 lastname 但是last 没有在模板上使用
-        // 渲染watcher在render的时候无法收集其依赖
-        // 1. Dep.target = fullname的watcher  
-        // 2. 触发用户设置的getter 在getter 触发了其 依赖的值
-        // 3. Dep.target = null
-        // 当在读取fullname的时候 当前的Dep.target 就是fullname
-        // 然后读取lastname的值触发其getter
-        // 然后lastname的dep 就会和 fullname的watcher 互相记住 形成依赖
-        // 那么下次就算没有在模板上渲染lastname 修改了lastname 也会通知fullname改值
-        // 从而触发渲染watcher 去render模板 render渲染的时候 读取了一遍fullname的值
-        // 但是基于computed的缓存机制 不会再对fullname重新求值 就不会触发用户的getter
-        // 这时候的Dep.target 就是渲染watcher
-        // 然后渲染watcher 就对 last也收集了依赖
-        // 如果last 既没有作为依赖 也没有放在模板中 渲染watcher 就不会对其收集依赖
-        // => 总结 ---->  这个watcher.depend的作用就是为了让渲染watcher记住 这个computed的依赖,因为模板上可能没有使用这个值
-        // 渲染watcher不会收集这个依赖 如果这个依赖改动了 不会通知渲染watcher 更新视图, 所以必须手动收集其依赖
+        // 触发computed的getter 并且 Dep.target 存在  就让Dep.target 上的watcher 记住 computed的 依赖的dep 
+        // 情况1： 如在模板上使用 fullname 视图更新的时候就会触发 fullname的getter
+        // 如果fullname 依赖的lastname 和firstname没有被收集过依赖
+        // 情况2： 在其他computed里使用fullname 其他computed 也会收集 lastname 和firstname作为依赖
+        // => 总结 ---->  这个watcher.depend的作用就是为了让当前watcher 记住这个computed的依赖的dep
+        // 从而修改其依赖的值的时候也会通知当前的这个watcher
         watcher.depend()
       }
       return watcher.value
