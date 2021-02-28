@@ -34,9 +34,13 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    // 创建一个响应effect
     this.effect = effect(getter, {
-      lazy: true,
+      lazy: true, // 第一次不触发effect
       scheduler: () => {
+        // 如果依赖的值发生了改变 触发了这个effect改变
+        //  this._dirty 设置为 true
+        // 并且触发conputed 的set
         if (!this._dirty) {
           this._dirty = true
           trigger(toRaw(this), TriggerOpTypes.SET, 'value')
@@ -48,10 +52,12 @@ class ComputedRefImpl<T> {
   }
 
   get value() {
+    // 如果依赖被改变了 重新获取新值
     if (this._dirty) {
-      this._value = this.effect()
+      this._value = this.effect() // 触发响应的effect 求值并且进行依赖收集 
       this._dirty = false
     }
+    // 收集依赖
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
@@ -65,13 +71,17 @@ export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(
   options: WritableComputedOptions<T>
 ): WritableComputedRef<T>
+
+
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
 ) {
+  // 创建getter 和 setter
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
 
   if (isFunction(getterOrOptions)) {
+    // 如果getterOrOptions 是个函数 直接设置getter
     getter = getterOrOptions
     setter = __DEV__
       ? () => {
@@ -83,6 +93,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
+  // 返回computed实例
   return new ComputedRefImpl(
     getter,
     setter,

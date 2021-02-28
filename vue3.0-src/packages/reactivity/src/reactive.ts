@@ -26,8 +26,8 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap = new WeakMap<Target, any>()
-export const readonlyMap = new WeakMap<Target, any>()
+export const reactiveMap = new WeakMap<Target, any>() // 响应数据映射表
+export const readonlyMap = new WeakMap<Target, any>() // 只读数据映射表
 
 const enum TargetType {
   INVALID = 0,
@@ -85,6 +85,7 @@ export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
+    // 如果这个值已经被readonly代理过 直接返回
     return target
   }
   return createReactiveObject(
@@ -163,6 +164,7 @@ export function shallowReadonly<T extends object>(
   )
 }
 
+// 根据不同参数 创建代理数据
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
@@ -170,6 +172,7 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>
 ) {
   if (!isObject(target)) {
+    // 如果传入的不是一个对象直接返回
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
     }
@@ -177,6 +180,8 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
+  // 如果该对象已经被代理过(用户自己代理) 也直接发返回
+  // 如果被reactive代理过 还可以被readonly继续处理
   if (
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
@@ -186,19 +191,23 @@ function createReactiveObject(
   // target already has corresponding Proxy
   const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
+  // 如果已经被响应式代理 找到缓存的数据直接返回
   if (existingProxy) {
     return existingProxy
   }
   // only a whitelist of value types can be observed.
+  // 如果是白名单里的可拓展对象 才可以被代理
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // 创建代理
+  // 根据不同的类型传入不同的代理配置 TargetType.COLLECTION为集合类型 如 Map Set ...
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
-  proxyMap.set(target, proxy)
+  proxyMap.set(target, proxy) // 缓存代理的对象 和代理结果
   return proxy
 }
 
@@ -217,12 +226,14 @@ export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
+// 返回被代理之前的原始值
 export function toRaw<T>(observed: T): T {
   return (
     (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
   )
 }
 
+// 标记某个值不会被代理
 export function markRaw<T extends object>(value: T): T {
   def(value, ReactiveFlags.SKIP, true)
   return value

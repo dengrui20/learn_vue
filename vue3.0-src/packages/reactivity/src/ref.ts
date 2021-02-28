@@ -48,19 +48,23 @@ export function shallowRef<T extends object>(
 export function shallowRef<T>(value: T): Ref<T>
 export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
+  // 返回一个ref对象
   return createRef(value, true)
 }
 
 class RefImpl<T> {
+  // ref实例
   private _value: T
 
-  public readonly __v_isRef = true
+  public readonly __v_isRef = true  // ref标识
 
   constructor(private _rawValue: T, public readonly _shallow = false) {
+    // 如果是深度监听对象 最后还是会调用 reactive()
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
-  get value() {
+  get value() {  // babel 转义后 使用的是defineProperty
+    // get value 的时候依赖依赖收集
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
@@ -74,6 +78,7 @@ class RefImpl<T> {
   }
 }
 
+// 创建一个ref对象
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
