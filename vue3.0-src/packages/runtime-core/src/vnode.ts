@@ -330,7 +330,9 @@ function _createVNode(
   }
 
   if (isVNode(type)) {
+    // 如果type是vnode 直接返回一个相同属性新的vnode
     // createVNode receiving an existing vnode. This happens in cases like
+    // createVNode接收现有vnode。这种情况发生在
     // <component :is="vnode"/>
     // #2078 make sure to merge refs during the clone instead of overwriting it
     const cloned = cloneVNode(type, props, true /* mergeRef: true */)
@@ -341,6 +343,7 @@ function _createVNode(
   }
 
   // class component normalization.
+  // 标记类组件
   if (isClassComponent(type)) {
     type = type.__vccOpts
   }
@@ -349,6 +352,7 @@ function _createVNode(
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
     if (isProxy(props) || InternalObjectKey in props) {
+      // 如果props 是个 响应式的值或者是被代理的对象 需要克隆 用来触发响应
       props = extend({}, props)
     }
     let { class: klass, style } = props
@@ -356,8 +360,7 @@ function _createVNode(
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
-      // reactive state objects need to be cloned since they are likely to be
-      // mutated
+       // mutated
       if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
@@ -366,6 +369,7 @@ function _createVNode(
   }
 
   // encode the vnode type information into a bitmap
+  // 标记vnode类型
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
@@ -390,6 +394,7 @@ function _createVNode(
     )
   }
 
+  // 创建vnode
   const vnode: VNode = {
     __v_isVNode: true,
     [ReactiveFlags.SKIP]: true,
@@ -422,6 +427,7 @@ function _createVNode(
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
+  // 标准化children
   normalizeChildren(vnode, children)
 
   // normalize suspense children
@@ -563,7 +569,8 @@ export function createCommentVNode(
     : createVNode(Comment, null, text)
 }
 
-export function normalizeVNode(child: VNodeChild): VNode {
+// 对一些特殊节点格式化
+export function normalizeVNode(child: VNodeChild): VNode { 
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)
@@ -576,6 +583,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return child.el === null ? child : cloneVNode(child)
   } else {
     // strings and numbers
+    // 创建文本节点 
     return createVNode(Text, null, String(child))
   }
 }
@@ -591,8 +599,11 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   if (children == null) {
     children = null
   } else if (isArray(children)) {
+    // 如果children是个数组
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
+    // 如果chindren是个对象
+    // 如果是个element 或者 TELEPORT 类型
     if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default

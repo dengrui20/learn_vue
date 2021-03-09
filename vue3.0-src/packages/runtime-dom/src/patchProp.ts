@@ -30,6 +30,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentSuspense,
   unmountChildren
 ) => {
+  // 对class 和style 属性进行特殊处理
   switch (key) {
     // special
     case 'class':
@@ -40,8 +41,10 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       break
     default:
       if (isOn(key)) {
+       
         // ignore v-model listeners
         if (!isModelListener(key)) {
+          //  如果是事件 并且不是v-model事件 去更新事件
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (shouldSetAsProp(el, key, nextValue, isSVG)) {
@@ -76,13 +79,16 @@ function shouldSetAsProp(
   value: unknown,
   isSVG: boolean
 ) {
+  // 判断是否能设置该属性
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
+    // 大多数键必须设置为svg元素的属性才能工作
     // ...except innerHTML
     if (key === 'innerHTML') {
       return true
     }
     // or native onclick with function values
+    // 如果是原生click函数
     if (key in el && nativeOnRE.test(key) && isFunction(value)) {
       return true
     }

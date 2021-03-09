@@ -401,6 +401,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 创建一个组件实例
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -561,6 +562,8 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+  // 创建公共实例/渲染代理也将其标记为原始，这样就不会观察到它
+  // 用户 render里的回调参数
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
@@ -568,11 +571,14 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
+    // 创建一个setup回调里的上下文 供setup使用 这个上下文代理到了instance的属性
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
-    pauseTracking()
+    pauseTracking() // 暂停依赖收集
+    
+    // 执行setup方法获取返回结果
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -599,6 +605,7 @@ function setupStatefulComponent(
         )
       }
     } else {
+      // 处理setup执行结果
       handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
@@ -606,12 +613,14 @@ function setupStatefulComponent(
   }
 }
 
+// 处理 setup的返回结果
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
   isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
+    // setup返回的如果是一个render函数
     // setup returned an inline render function
     if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
@@ -632,7 +641,9 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 设置setupState
     instance.setupState = proxyRefs(setupResult)
+
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
     }
@@ -643,6 +654,7 @@ export function handleSetupResult(
       }`
     )
   }
+  // 处理render 函数 并且做2.0兼容处理
   finishComponentSetup(instance, isSSR)
 }
 
@@ -661,10 +673,12 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
+ // 处理render 函数 并且做2.0兼容处理
 function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean
 ) {
+
   const Component = instance.type as ComponentOptions
 
   // template / render function normalization
@@ -674,6 +688,7 @@ function finishComponentSetup(
     }
   } else if (!instance.render) {
     // could be set from setup()
+    // 不存在render 编译template 生成render
     if (compile && Component.template && !Component.render) {
       if (__DEV__) {
         startMeasure(instance, `compile`)
@@ -701,6 +716,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
+  // 兼容vue2.0 optionApi
   if (__FEATURE_OPTIONS_API__) {
     currentInstance = instance
     pauseTracking()

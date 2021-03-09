@@ -30,6 +30,19 @@ let renderer: Renderer<Element> | HydrationRenderer
 let enabledHydration = false
 
 function ensureRenderer() {
+  // 返回一个渲染器
+  // 和 vue2.0 一样根据通过函数柯里化思想 通过不同 保存一些平台相关的操作 用于后面操作元素
+  //  
+  /**
+   * 最后会返回 {
+      render,
+      hydrate,
+      createApp: createAppAPI(render, hydrate) => function createApp => return app
+    }
+   * 
+   * 
+   * 
+  */
   return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
 
@@ -50,28 +63,48 @@ export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
 }) as RootHydrateFunction
 
+
+// 用户外部调用的createApp
 export const createApp = ((...args) => {
+
+   
   const app = ensureRenderer().createApp(...args)
+  /** ensureRenderer()
+  * return {
+    render,
+    hydrate,
+    createApp: createAppAPI(render, hydrate) => function createApp => return app
+  }
+  *  ensureRenderer().createApp 返回一个app对象
+  */
+
 
   if (__DEV__) {
     injectNativeTagCheck(app)
   }
 
   const { mount } = app
+
+  // 对mount 做函数劫持 最后还是会执行原先的mount
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
+    // 如果container 不存在直接return
     if (!container) return
+
     const component = app._component
     if (!isFunction(component) && !component.render && !component.template) {
       component.template = container.innerHTML
     }
     // clear content before mounting
+    // 清空需要挂载的元素
     container.innerHTML = ''
     const proxy = mount(container)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
     }
+
+    // 返回组件实例
     return proxy
   }
 

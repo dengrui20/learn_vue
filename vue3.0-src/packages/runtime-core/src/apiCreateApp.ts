@@ -120,6 +120,7 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
+// 返回一个创建App的函数 返回App对象
 export function createAppAPI<HostElement>(
   render: RootRenderFunction,
   hydrate?: RootHydrateFunction
@@ -129,12 +130,13 @@ export function createAppAPI<HostElement>(
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
     }
-
+    
     const context = createAppContext()
     const installedPlugins = new Set()
 
     let isMounted = false
-
+    
+    // 创建一个app对象 类似vue2中的Vue
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -225,7 +227,9 @@ export function createAppAPI<HostElement>(
       },
 
       mount(rootContainer: HostElement, isHydrate?: boolean): any {
+        // 挂载元素
         if (!isMounted) {
+          // 如果该组件还未被渲染 创建一个vnode
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -244,6 +248,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 进行挂载渲染
             render(vnode, rootContainer)
           }
           isMounted = true
@@ -292,7 +297,6 @@ export function createAppAPI<HostElement>(
         return app
       }
     })
-
     return app
   }
 }

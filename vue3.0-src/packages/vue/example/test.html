@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../dist/vue.global.js"></script>
+</head>
+<body>
+  <script>
+    let { reactive, watchEffect } = Vue
+    let state = reactive({
+      name: '小明',
+      age: 15
+    })
+    watchEffect(() => {
+      debugger
+      console.log(state.name, state.age)
+    })
+     setTimeout(() => {
+       console.log('22222222')
+        state.age++
+        state.name = "小红"
+      }, 1000);
+  </script>
+</body>
+</html>

@@ -161,6 +161,7 @@ export function h<P>(
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   const l = arguments.length
+  // 对不同的类型的参数进行处理
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props

@@ -72,6 +72,7 @@ export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase
 ): WatchStopHandle {
+  // 创建一个watcheffect
   return doWatch(effect, null, options)
 }
 
@@ -189,6 +190,7 @@ function doWatch(
         }
       })
   } else if (isFunction(source)) {
+    // 正常 watchEffect(() => {}) 用法
     if (cb) {
       // getter with cb
       getter = () =>
@@ -284,6 +286,7 @@ function doWatch(
     // default: 'pre'
     scheduler = () => {
       if (!instance || instance.isMounted) {
+        // 不存在组件或者组件已经挂载 放入异步队列更新
         queuePreFlushCb(job)
       } else {
         // with 'pre' option, the first call must happen before

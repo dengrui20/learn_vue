@@ -66,17 +66,25 @@ export function patchEvent(
   // vei = vue event invokers
   const invokers = el._vei || (el._vei = {})
   const existingInvoker = invokers[rawName]
+  // 从缓存里找到之前该元素是否绑定过对应事件
   if (nextValue && existingInvoker) {
     // patch
+    // 如果绑定过 直接修改调用的函数
     existingInvoker.value = nextValue
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
-      // add
+      // 创建一个调用函数 这个函数内部调用了用户传入的函数 如果用户传如的函数改变了 调用的函数也会改变
+      /**
+       *   function invoker() {  invoker.value() }
+       *    invoker.value = customFn
+       *  addEventListener(el, name, invoker)
+       */
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
+      // 移除之前绑定的 invokers
       removeEventListener(el, name, existingInvoker, options)
       invokers[rawName] = undefined
     }
@@ -110,6 +118,7 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
+    // 创建一个函数
     const timeStamp = e.timeStamp || _getNow()
     if (timeStamp >= invoker.attached - 1) {
       callWithAsyncErrorHandling(
@@ -120,6 +129,7 @@ function createInvoker(
       )
     }
   }
+  // 函数设置一个value 值为用户绑定的函数
   invoker.value = initialValue
   invoker.attached = getNow()
   return invoker

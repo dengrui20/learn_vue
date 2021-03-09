@@ -58,12 +58,16 @@ export function nextTick(
 }
 
 export function queueJob(job: SchedulerJob) {
+  // 异步更新队列
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
   // so it cannot recursively trigger itself again.
   // if the job is a watch() callback, the search will start with a +1 index to
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
+  // 如果更新队列为空 或者 该队列不存在当前的更新effect 
+  // 将该effect 推入更新推理额
+
   if (
     (!queue.length ||
       !queue.includes(
@@ -73,6 +77,7 @@ export function queueJob(job: SchedulerJob) {
     job !== currentPreFlushParentJob
   ) {
     queue.push(job)
+    // 执行更新队列
     queueFlush()
   }
 }
@@ -80,6 +85,7 @@ export function queueJob(job: SchedulerJob) {
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
+    // 异步执行更新队列
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
@@ -130,6 +136,8 @@ export function flushPreFlushCbs(
 ) {
   if (pendingPreFlushCbs.length) {
     currentPreFlushParentJob = parentJob
+
+    
     activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
     pendingPreFlushCbs.length = 0
     if (__DEV__) {
@@ -195,7 +203,6 @@ function flushJobs(seen?: CountMap) {
   if (__DEV__) {
     seen = seen || new Map()
   }
-
   flushPreFlushCbs(seen)
 
   // Sort queue before flush.
@@ -205,6 +212,9 @@ function flushJobs(seen?: CountMap) {
   //    priority number)
   // 2. If a component is unmounted during a parent component's update,
   //    its update can be skipped.
+  // 保证更新顺序 先父后子
+  // 组件从父级更新到子级。（因为父级总是在子级之前创建的，所以其渲染效果的优先级会更小）
+  // 如果在父组件更新期间卸载了组件，则可以跳过其更新
   queue.sort((a, b) => getId(a) - getId(b))
 
   try {
@@ -214,10 +224,12 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__) {
           checkRecursiveUpdates(seen!, job)
         }
+        // 调用渲染effect
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }
   } finally {
+    // 执行完之后 清空更新队列
     flushIndex = 0
     queue.length = 0
 

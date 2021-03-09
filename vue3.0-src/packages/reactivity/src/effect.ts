@@ -89,11 +89,13 @@ function createReactiveEffect<T = any>(
 ): ReactiveEffect<T> {
   // 创建一个effect响应式函数
   const effect = function reactiveEffect(): unknown {
+
     if (!effect.active) {
       // 非激活状态，则判断如果非调度执行，则直接执行原始函数。
       return options.scheduler ? undefined : fn()
     }
     if (!effectStack.includes(effect)) {
+      // effect 依赖多个值的时候这多个值同时被修改都触会发effect, 判断如果执行栈里已经有了 就不会再次触发 
       // 当前Effect 还在 栈记录里没有出栈 代表 当前Effect还没执行完又被执行了一次
       /**
        * 如 let effect1 = effect(() => { console.log(state.count);state.count ++ })
