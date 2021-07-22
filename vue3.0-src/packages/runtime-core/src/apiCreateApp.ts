@@ -94,6 +94,7 @@ export type Plugin =
       install: PluginInstallFunction
     }
 
+    // 创建一个app上下文
 export function createAppContext(): AppContext {
   return {
     app: null as any,

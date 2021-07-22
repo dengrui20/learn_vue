@@ -30,9 +30,11 @@ export type SchedulerCbs = SchedulerCb | SchedulerCb[]
 let isFlushing = false
 let isFlushPending = false
 
+// 异步任务队列
 const queue: SchedulerJob[] = []
 let flushIndex = 0
 
+// 队列任务执行完后执行的回调函数队列 
 const pendingPreFlushCbs: SchedulerCb[] = []
 let activePreFlushCbs: SchedulerCb[] | null = null
 let preFlushIndex = 0
@@ -66,7 +68,7 @@ export function queueJob(job: SchedulerJob) {
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
   // 如果更新队列为空 或者 该队列不存在当前的更新effect 
-  // 将该effect 推入更新推理额
+  // 将该effect 推入更新队列
 
   if (
     (!queue.length ||
@@ -84,6 +86,7 @@ export function queueJob(job: SchedulerJob) {
 
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
+    // 等待清空
     isFlushPending = true
     // 异步执行更新队列
     currentFlushPromise = resolvedPromise.then(flushJobs)
@@ -97,6 +100,7 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
+// 添加到回调队列
 function queueCb(
   cb: SchedulerCbs,
   activeQueue: SchedulerCb[] | null,
@@ -111,12 +115,14 @@ function queueCb(
         (cb as SchedulerJob).allowRecurse ? index + 1 : index
       )
     ) {
+      // 直接添加到对应的队列中去
       pendingQueue.push(cb)
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
+    // 如果cb是个数组 处理拍平成一个以为数组
     pendingQueue.push(...cb)
   }
   queueFlush()
@@ -127,6 +133,7 @@ export function queuePreFlushCb(cb: SchedulerCb) {
 }
 
 export function queuePostFlushCb(cb: SchedulerCbs) {
+  // 将对应的回调 push到对应的队列中去
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
@@ -163,10 +170,15 @@ export function flushPreFlushCbs(
 
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
+
+    // 复制一份postcbs后清空
+    // 可能某些回调函数的执行会再次修改 postFlushCbs，
+    // 所以拷贝一个副本循环遍历则不会受到 postFlushCbs 修改的影响
     const deduped = [...new Set(pendingPostFlushCbs)]
     pendingPostFlushCbs.length = 0
 
     // #1947 already has active queue, nested flushPostFlushCbs call
+    // 如果已经有正在执行的postCb 说明嵌套 postCb 执行  直接添加到正在执行的队列
     if (activePostFlushCbs) {
       activePostFlushCbs.push(...deduped)
       return
@@ -184,6 +196,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
+      // 循环执行对应的回调
       if (__DEV__) {
         checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
       }
@@ -197,12 +210,15 @@ export function flushPostFlushCbs(seen?: CountMap) {
 const getId = (job: SchedulerJob | SchedulerCb) =>
   job.id == null ? Infinity : job.id
 
+  // 清空异步任务
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
   isFlushing = true
   if (__DEV__) {
     seen = seen || new Map()
   }
+
+  // 在更新之前 执行preflushcbs里的 回调
   flushPreFlushCbs(seen)
 
   // Sort queue before flush.
@@ -216,15 +232,15 @@ function flushJobs(seen?: CountMap) {
   // 组件从父级更新到子级。（因为父级总是在子级之前创建的，所以其渲染效果的优先级会更小）
   // 如果在父组件更新期间卸载了组件，则可以跳过其更新
   queue.sort((a, b) => getId(a) - getId(b))
-
   try {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
       if (job) {
         if (__DEV__) {
+          // 非生产环境下检测是否有循环更新
           checkRecursiveUpdates(seen!, job)
         }
-        // 调用渲染effect
+        // 调用渲染effect 执行异步任务
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }
@@ -232,7 +248,7 @@ function flushJobs(seen?: CountMap) {
     // 执行完之后 清空更新队列
     flushIndex = 0
     queue.length = 0
-
+    // 更新完成之后 执行postcbs里的回调
     flushPostFlushCbs(seen)
 
     isFlushing = false
@@ -240,12 +256,17 @@ function flushJobs(seen?: CountMap) {
     // some postFlushCb queued jobs!
     // keep flushing until it drains.
     if (queue.length || pendingPostFlushCbs.length) {
+      // 一些 postFlushCb 执行过程中会再次添加异步任务，递归 flushJobs 会把它们都执行完毕
       flushJobs(seen)
     }
   }
 }
 
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
+  // 检测循环更新
+  // 每次flushjobs 一开始就创建了一个seen
+  // flushcbs的时候回忘seen中添加， 记录医用计数 count 如果在一个tick内
+  // 添加超过 RECURSION_LIMIT 的次数就会警告
   if (!seen.has(fn)) {
     seen.set(fn, 1)
   } else {

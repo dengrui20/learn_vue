@@ -121,6 +121,7 @@ export function watch<
 ): WatchStopHandle
 
 // implementation
+// watch 方法
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
@@ -133,6 +134,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
         `supports \`watch(source, cb, options?) signature.`
     )
   }
+  // 调用 doWatch
   return doWatch(source as any, cb, options)
 }
 
@@ -166,8 +168,17 @@ function doWatch(
     )
   }
 
+  // watch 3种使用方式
+  /*
+    1. watch(() => state.count,(count, prevCount) => {})
+    2. watch(state.count,(count, prevCount) => {})
+    3. watch([a,b,c]), ([a,b,c], [prevA,prevB, prevC]) => {})
+  */
+  // 处理getter
   let getter: () => any
   let forceTrigger = false
+
+  // 2. watch(state.count,(count, prevCount) => {}) 的情况
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -175,11 +186,15 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    //  3. watch([a,b,c]), ([a,b,c], [prevA,prevB, prevC]) => {})
     getter = () =>
       source.map(s => {
+        // 对 1、 2 2种情况进行处理“ 
         if (isRef(s)) {
+        
           return s.value
         } else if (isReactive(s)) {
+          // 递归对象取值
           return traverse(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
@@ -190,15 +205,17 @@ function doWatch(
         }
       })
   } else if (isFunction(source)) {
-    // 正常 watchEffect(() => {}) 用法
+    // 1. watch(() => state.count,(count, prevCount) => {})
     if (cb) {
       // getter with cb
+      // getter =>    () => state.count
       getter = () =>
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
           instance && (instance.proxy as any)
         ])
     } else {
       // no cb -> simple effect
+      // watchEffect 会进入这里
       getter = () => {
         if (instance && instance.isUnmounted) {
           return
@@ -219,12 +236,14 @@ function doWatch(
     __DEV__ && warnInvalidSource(source)
   }
 
+    // 如果是深度监听 getter 就会递归求值
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
 
   let cleanup: () => void
+  // 注册无效的回调
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
@@ -247,6 +266,7 @@ function doWatch(
   }
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  // 创建一个SchedulerJob
   const job: SchedulerJob = () => {
     if (!runner.active) {
       return
@@ -279,8 +299,10 @@ function doWatch(
 
   let scheduler: ReactiveEffectOptions['scheduler']
   if (flush === 'sync') {
+    // 创建同步scheduler
     scheduler = job
   } else if (flush === 'post') {
+    // 进入异步队列，组件更新后执行 
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
@@ -291,11 +313,14 @@ function doWatch(
       } else {
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.
+
+        // 如果组件还没挂载，则同步执行确保在组件挂载前 
         job()
       }
     }
   }
 
+  // runner 创建一个effect 监听getter
   const runner = effect(getter, {
     lazy: true,
     onTrack,
@@ -303,21 +328,27 @@ function doWatch(
     scheduler
   })
 
+  // 在组件实例中记录这个 effect 将该effect 添加到intance.effects中
+
   recordInstanceBoundEffect(runner, instance)
 
   // initial run
   if (cb) {
+    // 默认初次调用
     if (immediate) {
       job()
     } else {
+      // 求旧值
       oldValue = runner()
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(runner, instance && instance.suspense)
   } else {
+    // 没有cb 执行runner
     runner()
   }
 
+  // 返回一个销毁函数
   return () => {
     stop(runner)
     if (instance) {

@@ -20,10 +20,13 @@ export function injectHook(
   prepend: boolean = false
 ): Function | undefined {
   if (target) {
+    // 判断 钩子函数是否在某个组件内部执行
+    // 给对应的生命周期钩子生成一个数组 收集多个生命钩子
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
     // can be properly deduped by the scheduler. "__weh" stands for "with error
     // handling".
+    // 为注入的钩子缓存错误处理包装器，以便调度程序可以正确地删除相同的钩子。”__“weh”代表“带错误处理
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
@@ -45,6 +48,7 @@ export function injectHook(
     if (prepend) {
       hooks.unshift(wrappedHook)
     } else {
+      // 添加对应的生命周期函数
       hooks.push(wrappedHook)
     }
     return wrappedHook
@@ -68,7 +72,8 @@ export const createHook = <T extends Function = () => any>(
   // post-create lifecycle registrations are noops during SSR
   !isInSSRComponentSetup && injectHook(lifecycle, hook, target)
 
-export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
+  // 创建生命周期函数
+export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT) // 最后返回一个 (hook, target) => injectHook(lifecycle, hook, target)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
 export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(LifecycleHooks.UPDATED)
