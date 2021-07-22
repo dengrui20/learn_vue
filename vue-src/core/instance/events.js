@@ -13,6 +13,7 @@ export function initEvents (vm: Component) {
   /*初始化父组件attach的事件*/
   const listeners = vm.$options._parentListeners
   if (listeners) {
+    // 更新组件事件
     updateComponentListeners(vm, listeners)
   }
 }

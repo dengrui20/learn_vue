@@ -69,7 +69,7 @@ function flushSchedulerQueue () {
     watcher = queue[index]
     id = watcher.id
     /*将has的标记删除*/
-    has[id] = nullÏ
+    has[id] = null
     /*执行watcher*/
     watcher.run()
     // in dev build, check and stop circular updates.

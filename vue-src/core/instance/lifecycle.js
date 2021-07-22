@@ -33,6 +33,7 @@ export function initLifecycle (vm: Component) {
   if (parent && !options.abstract) {
     // 一般组件会走这一部分
     // 建立父子关系
+    // 抽象组件跳过父子关系 如 a -> b -> c  b是抽象组件 c的父组件就跳过b 是a
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
     }

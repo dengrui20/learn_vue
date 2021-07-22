@@ -38,9 +38,7 @@ export function initMixin (Vue: Class<Component>) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
-      //优化内部组件实例化
-      //动态选择合并以来非常缓慢,并没有
-      //内部组件选项需要特殊处理。
+      // 如果是组件 将options 的属性挂载到vm.$options上
       initInternalComponent(vm, options)
     } else {
       // mergeOptions -> 定义在 core/util/options.js
@@ -50,7 +48,8 @@ export function initMixin (Vue: Class<Component>) {
         // 'components',
         //   'directives',
         //   'filters'
-        resolveConstructorOptions(vm.constructor), // vm的构造函数就是vue 相当于把vue 作为参数传入 返回一个options
+        // vm的构造函数就是vue 相当于把vue 作为参数传入 返回一个合并父类和用户的选项合并后的 options 
+        resolveConstructorOptions(vm.constructor), 
         options || {},   // options -> new Vue时传入的参数选项options  { el: '#app', data: function () { retuen {} } }
         vm
       )
@@ -66,6 +65,7 @@ export function initMixin (Vue: Class<Component>) {
     /*初始化生命周期*/
     initLifecycle(vm)
     /*初始化事件*/
+
     initEvents(vm)
     /*初始化render*/
     initRender(vm)

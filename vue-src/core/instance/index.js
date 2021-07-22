@@ -15,8 +15,8 @@ function Vue (options) {
   this._init(options)
 }
 
-initMixin(Vue)
-stateMixin(Vue)
+initMixin(Vue)  // 挂载 _init方法
+stateMixin(Vue) // 重写 $data 和 $props 的get, 挂载了 $set  $delete $watch
 eventsMixin(Vue)
 lifecycleMixin(Vue)
 renderMixin(Vue)

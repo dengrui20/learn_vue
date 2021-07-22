@@ -111,6 +111,7 @@ function initProps (vm: Component, propsOptions: Object) {
         }
       })
     } else {
+      // 监听 是props[key] 变成响应式
       defineReactive(props, key, value)
     }
     // static props are already proxied on the component's prototype
@@ -126,7 +127,6 @@ function initProps (vm: Component, propsOptions: Object) {
 
 /*初始化data*/
 function initData (vm: Component) {
-
   /*得到data数据*/
   let data = vm.$options.data
   data = vm._data = typeof data === 'function'
@@ -227,7 +227,7 @@ function initComputed (vm: Component, computed: Object) {
 }
 
 /*定义计算属性*/
-export function defineComputed (target: any, key: string, userDef: Object | Function) {
+export function vue (target: any, key: string, userDef: Object | Function) {
   if (typeof userDef === 'function') {
     /*创建计算属性的getter*/
     sharedPropertyDefinition.get = createComputedGetter(key)

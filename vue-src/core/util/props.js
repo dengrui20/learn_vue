@@ -47,6 +47,7 @@ export function validateProp (
     /*把之前的shouldConvert保存下来，当observe结束以后再设置回来*/
     const prevShouldConvert = observerState.shouldConvert
     observerState.shouldConvert = true
+    // 深度监听让value 变成响应式的值
     observe(value)
     observerState.shouldConvert = prevShouldConvert
   }
@@ -80,6 +81,7 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   // the raw prop value was also undefined from previous render,
   // return previous default value to avoid unnecessary watcher trigger
   /*以前的渲染的值如果不是undefined的，则返回上一次的默认值用以避免触发非必要的观察者*/
+  // 例如开发手动修改了 vm.$options.propsData[key] 为undefined 则以 vm._props[key]的值为准
   if (vm && vm.$options.propsData &&
     vm.$options.propsData[key] === undefined &&
     vm._props[key] !== undefined) {
@@ -88,6 +90,17 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   // call factory function for non-Function types
   // a value is Function if its prototype is function even across different execution context
   /*是funtion则改变它的上下文环境，vm。*/
+  /**
+    {
+      count: {
+        type: String,
+        default() {
+          return {a:1}
+        }
+      }
+    }
+   */
+    // 如果type 不是Function  但是 默认值是一个函数 则调用default 以default的返回值为准
   return typeof def === 'function' && getType(prop.type) !== 'Function'
     ? def.call(vm)
     : def

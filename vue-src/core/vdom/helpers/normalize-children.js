@@ -27,6 +27,9 @@ import { isDef, isUndef, isPrimitive } from 'shared/util'
 
 
 export function simpleNormalizeChildren (children: any) {
+  // 这种只有vue  内部调用vm._c 的时候才会调用  内部调用的时候 节点都是vnode 
+  // 如 _c('div',{}, ['1', ['2', ['3' , ['4']] ]])
+  // 最后会处理成 ['1', '2' , [3]]  减少一层遍历深度
   // 将2层深度的数组 转换成一层
   for (let i = 0; i < children.length; i++) {
     if (Array.isArray(children[i])) {
@@ -35,6 +38,7 @@ export function simpleNormalizeChildren (children: any) {
   }
   return children
 }
+
 
 // 2. When the children contains constructs that always generated nested Arrays,
 // e.g. <template>, <slot>, v-for, or when the children is provided by user

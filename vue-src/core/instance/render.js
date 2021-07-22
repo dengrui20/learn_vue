@@ -44,6 +44,21 @@ export function initRender (vm: Component) {
   // user-written render functions.
   /*常规方法被用于公共版本，被用来作为用户界面的渲染方法*/
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+  
+  const parentData = parentVnode && parentVnode.data
+
+  /* istanbul ignore else */
+  if (process.env.NODE_ENV !== 'production') {
+    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
+      !isUpdatingChildComponent && warn(`$attrs is readonly.`, vm)
+    }, true)
+    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, () => {
+      !isUpdatingChildComponent && warn(`$listeners is readonly.`, vm)
+    }, true)
+  } else {
+    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, null, true)
+    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
+  }
 }
 
 export function renderMixin (Vue: Class<Component>) {
@@ -84,7 +99,7 @@ export function renderMixin (Vue: Class<Component>) {
     let vnode
     try {
       /*调用render函数，返回一个VNode节点*/
-      vnode = render.call(vm._renderProxy, vm.$createElemen$createElement)
+      vnode = render.call(vm._renderProxy, vm.$createElemen)
     } catch (e) {
       // 指定组件的渲染和观察期间未捕获错误的处理函数。这个处理函数被调用时，可获取错误信息和 Vue 实例。
       /*Vue.config.errorHandler = function (err, vm, info) {

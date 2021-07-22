@@ -85,7 +85,7 @@ function createKeyToOldIdx (children, beginIdx, endIdx) {
 }
 
 /*创建patch方法*/
-export function createPatchFƒunction (backend) {
+export function createPatchFunction (backend) {
   let i, j
   const cbs = {}
 
@@ -105,11 +105,19 @@ export function createPatchFƒunction (backend) {
   // ]
   /*构建cbs回调函数，web平台上见/platforms/web/runtime/modules*/
   for (i = 0; i < hooks.length; ++i) {
+    //hooks = ['create', 'activate', 'update', 'remove', 'destroy']
+    // cbs = { create: [], activate: [], update: [], remove: [], destroy: [] }
     cbs[hooks[i]] = []
     for (j = 0; j < modules.length; ++j) {
       if (isDef(modules[j][hooks[i]])) {
+        // cbs = { create: []}
+        // cbs['create'].push(modules[0]['create'])
+        // cbs['create'].push(attrs['create'])
+        // cbs['create'].push(updateAttrs)
+        // cbs = { create: [updateAttrs, updateClass, ...]}
         cbs[hooks[i]].push(modules[j][hooks[i]])
       }
+      
     }
   }
 
@@ -463,35 +471,149 @@ export function createPatchFƒunction (backend) {
     // during leaving transitions
     const canMove = !removeOnly
 
+    /*
+    oldStart ->               <- oldEnd
+      a         b       c       d
+      c         b       d       a     e
+    newStart ->                   <- newEnd
+    */
+    
+    // 当老的比较完 或者 新的 比较完 之后 结束diff
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+      // 如果当前oldvnode节点为undefined 就移动指针
+      // oldvnode移动之后 会将当前节点设置为undefined, 后面比较的时候直接跳过这个节点
       if (isUndef(oldStartVnode)) {
         oldStartVnode = oldCh[++oldStartIdx] // Vnode has been moved left
       } else if (isUndef(oldEndVnode)) {
         oldEndVnode = oldCh[--oldEndIdx]
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
+         /*
+          oldStart ->               <- oldEnd
+        1   a         b       c       d
+        2   c         b       d       a     e
+          newStart ->                   <- newEnd
+
+          这种情况 比较的是 1a  2a  2个头部节点相同时
+          对应新旧指针的 节点相同时 递归比较子节点
+          比较完了之后oldStart 和 newStart 指针往后移动 比较 1b 和 2b
+        */
         /*前四种情况其实是指定key的时候，判定为同一个VNode，则直接patchVnode即可，分别比较oldCh以及newCh的两头节点2*2=4种情况*/
         patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue)
         oldStartVnode = oldCh[++oldStartIdx]
         newStartVnode = newCh[++newStartIdx]
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        /*
+          oldStart ->               <- oldEnd
+        1   a         b       c       d
+        2   a         b       d       g     d
+          newStart ->                   <- newEnd
+          这种情况 比较的是 1d  2d  2个尾部节点相同时
+          比较完了之后oldEnd 和 newEnd 指针往后移动 比较 1c 和 2g
+        */
         patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue)
         oldEndVnode = oldCh[--oldEndIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldStartVnode, newEndVnode)) { // Vnode moved right
+        /*
+          oldStart ->               <- oldEnd
+        1   d         b       c       a
+        2   a         b       d       g     d
+          newStart ->                   <- newEnd
+          这种情况 比较的是 1d  2d  新的尾部 和旧的 头部比较
+          比较完了之后oldStart 向后 和 newEnd 指针向前移动 比较 1b 和 2g
+        */
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue)
         canMove && nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm))
         oldStartVnode = oldCh[++oldStartIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldEndVnode, newStartVnode)) { // Vnode moved left
+        /*
+          oldStart ->               <- oldEnd
+        1   d         b       c       a
+        2   a         b       d       g     d
+          newStart ->                   <- newEnd
+          这种情况 比较的是 1a  2a  新的尾部 和旧的 头部比较
+          比较完了之后oldEnd 向前 和 newEnd 指针向hou移动 比较 1b 和 2g
+        */
         patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue)
         canMove && nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm)
         oldEndVnode = oldCh[--oldEndIdx]
         newStartVnode = newCh[++newStartIdx]
+
+
+        /*
+        1.  a  b  c  d
+
+        2.  a  c  b  d
+        
+        第一次的比较顺序是
+          1a  2a  元素相同 递归更新子节点 头部指针后移  比较完成 其他条件不会进入
+                    os       oe
+            1.  a   b    c   d
+
+            2.  a   c    b   d
+                    ns       ne
+        第二次比较
+          1b  2c  不符合条件
+          1d  2d  元素相同 递归更新子节点 尾部指针前移  比较完成 其他条件不会进入
+
+                    os   oe  
+            1.  a   b    c   d
+
+            2.  a   c    b   d
+                    ns   ne  
+
+        第三次比较
+          1b  2c  不符合条件
+          1c  2d  不符合条件
+          1b  2b  元素相同 递归更新子节点 旧的头部指针后移 新的尾部指针前移  比较完成 其他条件不会进入
+           
+
+        第四次比较
+          1b  2c  不符合条件
+          1c  2d  不符合条件
+          1b  2b  元素相同 递归更新子节点  更新指针 旧的头部指针后移  新的尾部指针前移
+
+                         os
+                         oe  
+            1.  a   b    c   d
+
+            2.  a   c    b   d
+                    ns
+                    ne     
+
+
+        
+                    所有的指针比较完成之后
+            
+                          
+                         oe  os
+            1.  a   b    c   d
+
+            2.  a   c    b   d
+                ne  ns
+                         
+        
+        
+        */
       } else {
         /*
           生成一个key与旧VNode的key对应的哈希表（只有第一次进来undefined的时候会生成，也为后面检测重复的key值做铺垫）
           比如childre是这样的 [{xx: xx, key: 'key0'}, {xx: xx, key: 'key1'}, {xx: xx, key: 'key2'}]  beginIdx = 0   endIdx = 2  
           结果生成{key0: 0, key1: 1, key2: 2}
+        */
+
+        // 如果四种情况比较都不符合条件  创建一个旧的节点集合的 map
+        /*
+          a  b  c  d
+          oldKeyToIdx = 
+          {
+            'a': 0
+            'b': 1
+            'c': 2
+            'd': 3
+          }
+          
         */
         if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
         /*如果newStartVnode新的VNode节点存在key并且这个key在oldVnode中能找到则返回这个节点的idxInOld（即第几个节点，下标）*/
@@ -512,6 +634,7 @@ export function createPatchFƒunction (backend) {
             )
           }
           if (sameVnode(elmToMove, newStartVnode)) {
+            // 复用老的节点进行patch
             /*如果新VNode与得到的有相同key的节点是同一个VNode则进行patchVnode*/
             patchVnode(elmToMove, newStartVnode, insertedVnodeQueue)
             /*因为已经patchVnode进去了，所以将这个老节点赋值undefined，之后如果还有新节点与该节点key相同可以检测出来提示已有重复的key*/
@@ -564,7 +687,8 @@ export function createPatchFƒunction (backend) {
     let i
     const data = vnode.data
     if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
-      /*i = data.hook.prepatch，如果存在的话，见"./create-component componentVNodeHooks"。*/
+      /*i = data.hook.prepatch, 如果存在的话，见"./create-component componentVNodeHooks"。*/
+      // prepatch -> updateChildComponent 更新 props listeners slots
       i(oldVnode, vnode)
     }
     const elm = vnode.elm = oldVnode.elm
@@ -572,6 +696,7 @@ export function createPatchFƒunction (backend) {
     const ch = vnode.children
     if (isDef(data) && isPatchable(vnode)) {
       /*调用update回调以及update钩子*/
+      // cbs.update 更新部分属性
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
@@ -714,6 +839,7 @@ export function createPatchFƒunction (backend) {
    */
    return function patch (oldVnode, vnode, hydrating, removeOnly, parentElm, refElm) {
     /*vnode不存在则直接调用销毁钩子*/
+    // 组件初次挂载的时候不会进入这里
     if (isUndef(vnode)) {
       if (isDef(oldVnode)) invokeDestroyHook(oldVnode)
       return
@@ -722,6 +848,7 @@ export function createPatchFƒunction (backend) {
     let isInitialPatch = false
     const insertedVnodeQueue = [] // 不断添加组件实例  从根组件开始
 
+      // 初次挂载的时候 会有挂载节点 所以一般会走else
     if (isUndef(oldVnode)) {
       // 组件渲染的时候 oldvnode 为空 走这里的逻辑
       // empty mount (likely as component), create new root element
@@ -730,6 +857,7 @@ export function createPatchFƒunction (backend) {
       // 传入的是一个组件的 渲染vnode
       createElm(vnode, insertedVnodeQueue, parentElm, refElm)
     } else {
+   
       /*标记旧的VNode是否有nodeType 是否是一个真实的节点 首次渲染的时候为true*/
       const isRealElement = isDef(oldVnode.nodeType)
       if (!isRealElement && sameVnode(oldVnode, vnode)) {
