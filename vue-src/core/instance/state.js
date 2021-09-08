@@ -227,7 +227,7 @@ function initComputed (vm: Component, computed: Object) {
 }
 
 /*定义计算属性*/
-export function vue (target: any, key: string, userDef: Object | Function) {
+export function defineComputed (target: any, key: string, userDef: Object | Function) {
   if (typeof userDef === 'function') {
     /*创建计算属性的getter*/
     sharedPropertyDefinition.get = createComputedGetter(key)
