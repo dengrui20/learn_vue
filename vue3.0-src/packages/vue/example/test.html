@@ -1,28 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
   <script src="../dist/vue.global.js"></script>
+  <script src="../../reactivity//dist/reactivity.global.js"></script>
 </head>
+
 <body>
+  <div id="app">#app</div>
   <script>
-    let { reactive, watchEffect } = Vue
-    let state = reactive({
-      name: '小明',
-      age: 15
+    let { effect } = VueReactivity
+    let { reactive, watchEffect, compile, watch, createApp, h, nextTick, computed, ref, defineProps } = Vue
+
+    // createApp(() => h('div', {}, 'xxxxx')).mount('#app')
+    console.log(Vue)
+
+    console.log(compile(`<input type="text" v-model="xxx" />`))
+
+   
+    let vm = createApp({
+      template: `
+        <div>
+          massage: {{ state.msg }}
+          <br/>
+          count: {{ state.count }}
+        </div>
+        <button @click="changeMsg">changeMsg</button>
+        <hr />
+        <child v-model:count="state.count"></child>
+        `,
+      // data() {
+      //   return {
+      //     state: {
+      //       msg: 'mssage',
+      //       age: 15
+      //     }
+      //   }
+      // },
+      // methods: {
+      //   changeMsg() {
+      //     this.state.msg = 'xxxxx'
+      //     this.state.age ++
+      //   }
+      // }
+      setup() {
+        let state = reactive({
+          name: '小明',
+          age: 18,
+          count: 2,
+          msg: 'massage'
+        })
+
+        let ageDabule = computed(() => (state.age * 2))
+        console.log(ageDabule.value)
+        function changeMsg() {
+          state.count++
+        }
+
+
+        watch(() => state.count, () => {
+          console.log('App age 修改了', state.age)
+        })
+        // watchEffect(() => {
+        //   console.log(state.age)
+        // }, { flush: 'pre' })
+
+        // watchEffect(() => {
+        //   console.log(state.msg)
+        // }, { flush: 'post' })
+        return {
+          state,
+          changeMsg
+        }
+      }
     })
-    watchEffect(() => {
-      debugger
-      console.log(state.name, state.age)
+    vm.component('Child', {
+      template: `
+        <div>xxx</div>
+        <input type="text" v-model="count" />
+        <button @click="changeParentCount">changeParentCount</button>
+        <input v-model="state.radio" type="radio" name="radio" value="1"  label="1" />
+        <input v-model="state.radio" type="radio" name="radio" value="2"  label="2" />
+        <input v-model="state.radio" type="radio" name="radio" value="3"  label="3" />
+      `,
+      props: {
+        count: {
+          type: Number
+        }
+      },
+      setup(props, { emit }) {
+        let state = reactive({ radio: 1 })
+        watch(() => state.radio, () => {
+          console.log(state.radio)
+        })
+        return {
+          state,
+          changeParentCount(e) {
+            emit('update:count',e.target.value)
+          }
+        }
+      }
     })
-     setTimeout(() => {
-       console.log('22222222')
-        state.age++
-        state.name = "小红"
-      }, 1000);
+
+
+    vm.mount('#app')
+
+    //state.obj = 1
+
+
+    // setInterval(() => {
+    //    state.obj.a ++
+    //  }, 2000);
   </script>
 </body>
+
 </html>

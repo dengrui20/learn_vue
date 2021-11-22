@@ -455,6 +455,7 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+  // 更新节点
   const patch: PatchFn = (
     n1,
     n2,
@@ -478,6 +479,7 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // 根据新节点的类型 做不同处理
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -645,6 +647,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 处理不同类型节点
   const moveStaticNode = (
     { el, anchor }: VNode,
     container: RendererElement,
@@ -883,6 +886,7 @@ function baseCreateRenderer(
     }
   }
 
+  // diff 更新元素
   const patchElement = (
     n1: VNode,
     n2: VNode,
@@ -1132,6 +1136,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 处理fragment
   const processFragment = (
     n1: VNode | null,
     n2: VNode,
@@ -1334,6 +1339,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 组件更新
   const updateComponent = 
   (n1: VNode, n2: VNode, optimized: boolean) => {
     const instance = (n2.component = n1.component)!
@@ -1381,6 +1387,7 @@ function baseCreateRenderer(
   }
 
      
+  // 设置renderEffect
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
     initialVNode,
@@ -1591,6 +1598,7 @@ function baseCreateRenderer(
     flushPreFlushCbs(undefined, instance.update)
   }
 
+  // 更新children
   const patchChildren: PatchChildrenFn = (
     n1,
     n2,
@@ -1706,6 +1714,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 更新没有key的children
   const patchUnkeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
@@ -2089,6 +2098,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 卸载该元素
   const unmount: UnmountFn = (
     vnode,
     parentComponent,
@@ -2096,7 +2106,7 @@ function baseCreateRenderer(
     doRemove = false,
     optimized = false
   ) => {
-    // 卸载该元素
+    
     const {
       type,
       props,
@@ -2350,7 +2360,7 @@ function baseCreateRenderer(
     render,
     hydrate,
     // 返回一个创建一个App 对象 => vue2.0 => Vue 
-    createApp: createAppAPI(render, hydrate)
+    createApp: createAppAPI(render, hydrate) // =>  {use, mixin, component, directive, mount, _uid, _component, _props, _container, _context, version, config }
   }
 }
 

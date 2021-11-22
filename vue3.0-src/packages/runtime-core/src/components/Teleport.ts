@@ -83,9 +83,10 @@ export const TeleportImpl = {
 
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
-
+    // 挂载节点
     if (n1 == null) {
       // insert anchors in the main view
+      // 根据环境创建节点
       const placeholder = (n2.el = __DEV__
         ? createComment('teleport start')
         : createText(''))
@@ -94,6 +95,7 @@ export const TeleportImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
+      // 找到需要挂载的节点
       const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
@@ -126,6 +128,7 @@ export const TeleportImpl = {
         mount(target, targetAnchor)
       }
     } else {
+      // 更新节点
       // update content
       n2.el = n1.el
       const mainAnchor = (n2.anchor = n1.anchor)!

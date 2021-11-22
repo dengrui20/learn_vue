@@ -40,8 +40,6 @@ function ensureRenderer() {
       createApp: createAppAPI(render, hydrate) => function createApp => return app
     }
    * 
-   * 
-   * 
   */
   return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
@@ -66,8 +64,6 @@ export const hydrate = ((...args) => {
 
 // 用户外部调用的createApp
 export const createApp = ((...args) => {
-
-   
   const app = ensureRenderer().createApp(...args)
   /** ensureRenderer()
   * return {

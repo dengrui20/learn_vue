@@ -196,7 +196,7 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
-  // 如果是白名单里的可拓展对象 才可以被代理
+  // 如果是白名单里的可拓展类型 才可以被代理
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target

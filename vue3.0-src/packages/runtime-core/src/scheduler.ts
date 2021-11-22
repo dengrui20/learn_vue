@@ -59,8 +59,8 @@ export function nextTick(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
+ // 异步更新队列
 export function queueJob(job: SchedulerJob) {
-  // 异步更新队列
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
   // so it cannot recursively trigger itself again.
@@ -78,12 +78,15 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
+    // 如果更新队列为空, 或者queue不包含这个job 就加入队列
+    // 如果已经包含了 就不加入队列 防止一个tick里多次更新
     queue.push(job)
     // 执行更新队列
     queueFlush()
   }
 }
 
+// 异步执行队列
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     // 等待清空
@@ -101,6 +104,7 @@ export function invalidateJob(job: SchedulerJob) {
 }
 
 // 添加到回调队列
+// queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 function queueCb(
   cb: SchedulerCbs,
   activeQueue: SchedulerCb[] | null,
@@ -122,21 +126,23 @@ function queueCb(
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
-    // 如果cb是个数组 处理拍平成一个以为数组
+    // 如果cb是个数组 处理拍平成一个一维数组
     pendingQueue.push(...cb)
   }
   queueFlush()
 }
 
+// 添加到pre队列
 export function queuePreFlushCb(cb: SchedulerCb) {
   queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 }
 
+// 添加到post队列
 export function queuePostFlushCb(cb: SchedulerCbs) {
-  // 将对应的回调 push到对应的队列中去
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
+// 执行pre 队列
 export function flushPreFlushCbs(
   seen?: CountMap,
   parentJob: SchedulerJob | null = null

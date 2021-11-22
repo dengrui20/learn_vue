@@ -146,12 +146,14 @@ function doWatch(
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
+      // immediate 必须有 cb的时候才能配置
       warn(
         `watch() "immediate" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
       )
     }
     if (deep !== undefined) {
+      // deep 必须有 cb的时候才能配置
       warn(
         `watch() "deep" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
@@ -167,7 +169,7 @@ function doWatch(
         `a reactive object, or an array of these types.`
     )
   }
-
+  
   // watch 3种使用方式
   /*
     1. watch(() => state.count,(count, prevCount) => {})
@@ -189,7 +191,7 @@ function doWatch(
     //  3. watch([a,b,c]), ([a,b,c], [prevA,prevB, prevC]) => {})
     getter = () =>
       source.map(s => {
-        // 对 1、 2 2种情况进行处理“ 
+        // 对 1、 2 2种情况进行处理
         if (isRef(s)) {
         
           return s.value
@@ -208,7 +210,7 @@ function doWatch(
     // 1. watch(() => state.count,(count, prevCount) => {})
     if (cb) {
       // getter with cb
-      // getter =>    () => state.count
+      // getter => () => state.count
       getter = () =>
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
           instance && (instance.proxy as any)
@@ -220,6 +222,7 @@ function doWatch(
         if (instance && instance.isUnmounted) {
           return
         }
+
         if (cleanup) {
           cleanup()
         }
@@ -357,7 +360,6 @@ function doWatch(
   }
 }
 
-// this.$watch
 export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,

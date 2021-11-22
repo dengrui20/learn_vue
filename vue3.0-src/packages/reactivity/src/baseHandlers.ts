@@ -45,8 +45,11 @@ const arrayInstrumentations: Record<string, Function> = {}
 // values
 ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
   // 方法劫持 重写原有方法 增加自定义逻辑
-  // [a, b, c].includes(x)
-  // x 可能是 a 或者 b c 当 a b c改变了都要触发更新 所以需要对数组的每一项进行依赖收集 
+  // let arr = [a, b, c]
+  // effect(() => {
+  //   console.log(arr.includes(x))
+  // })
+  // 当 a b c改变了都要触发更新 所以需要对数组的每一项进行依赖收集 
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     const arr = toRaw(this) // toRaw 可以把响应式对象转成原始数据
@@ -72,6 +75,7 @@ const arrayInstrumentations: Record<string, Function> = {}
  *  effect(() => arr.push(1)) length改变 会触发 effect2
  *  effect(() => arr.push(2)) length改变 会触发 effect1
  *  调用改变数组方法的时候 会改变数组的length 这时候会访问length  对length进行依赖收集
+ *  length 改变又会触发effect
  *  这样会导致无限调用 
  *  所以调用改变数组的一些方法的时候不能进行依赖收集
  */
@@ -229,7 +233,7 @@ function createSetter(shallow = false) {
        * myProxy.a 
        * 先触发myProxy.get 不存在 会顺着原型链向上查找
        * 触发了proxyProto.get
-       * 触发了2次set
+       * 触发了2次get
        *  
        * target === toRaw(receiver)
        * 通过判断
