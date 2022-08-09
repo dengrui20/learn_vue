@@ -28,6 +28,13 @@ export function createMatcher (
     currentRoute?: Route,
     redirectedFrom?: Location
   ): Route {
+    // 格式化location 创建一个nextLocation对象
+    // {
+    //   path: 'xxx' || raw,
+    //   name: currentRoute.name,
+    //   params: currentRoute.params,
+    //   query: {}
+    // }
     const location = normalizeLocation(raw, currentRoute, false, router)
     const { name } = location
 

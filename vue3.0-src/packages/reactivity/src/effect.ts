@@ -52,8 +52,6 @@ export function isEffect(fn: any): fn is ReactiveEffect {
   return fn && fn._isEffect === true
 }
 
-
-
 export function effect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions = EMPTY_OBJ
@@ -94,15 +92,14 @@ function createReactiveEffect<T = any>(
       return options.scheduler ? undefined : fn()
     }
     if (!effectStack.includes(effect)) {
-      // effect 依赖多个值的时候这多个值同时被修改都触会发effect, 判断如果执行栈里已经有了 就不会再次触发 
+      // effect 依赖多个值的时候这多个值同时被修改都触会发effect, 判断如果执行栈里已经有了 就不会再次触发
       // 当前Effect 还在 栈记录里没有出栈 代表 当前Effect还没执行完又被执行了一次
       /**
        *  如 let effect1 = effect(() => { console.log(state.count);state.count ++ })
        *  effect1 执行的时候 state.count 又触发了 effect1执行 这样会形成死循环
        *  为了避免这种情况发生 如果当前effect 没有执行完成 不能再次执行
-       */ 
+       */
 
-       
       // 清空 effect 引用的依赖 重新进行收集 防止上一次依赖的值 这次可能不需要依赖
       cleanup(effect)
 
@@ -127,7 +124,7 @@ function createReactiveEffect<T = any>(
   effect.allowRecurse = !!options.allowRecurse
   effect._isEffect = true // 标识是一个响应式effect
   effect.active = true // 是否被激活
-  effect.raw = fn // effect(fn ) 执行的时候 传入的 用户函数
+  effect.raw = fn // effect(fn) 执行的时候 传入的 用户函数
   effect.deps = [] // 存储收集依赖的
   effect.options = options
   return effect
@@ -166,7 +163,7 @@ export function resetTracking() {
 // 收集依赖
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
-    return
+      return
   }
   // 在映射表里找到 当前的值有没有对应的effect
   let depsMap = targetMap.get(target)
@@ -178,16 +175,16 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     // 如 targetMap as WeakMap => { {a:1} as WeakMap.key : {} as Map }
     /**
      * { WeakMap
-     *   {a:1,b:{c:2}}:   { Map 
+     *   {a:1,b:{c:2}}:   { Map
      *      a: [ effect1, effect2 ]  Set
      *      b: [ effect1 ]
      *   },
      *  {c: 2}:    { Map
      *      c: [ effect1, effect2 ]  Set
      *   },
-     * 
      *
-    */
+     *
+     */
     targetMap.set(target, (depsMap = new Map()))
   }
   // 检查当前target【key】下是否有对应的Effect记录
@@ -197,7 +194,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
   // 如果当前值对应的Effect记录没有 当前effect, 则收集当前effect
   if (!dep.has(activeEffect)) {
-
     dep.add(activeEffect)
     // 当前Effect 也收集当前的值
     activeEffect.deps.push(dep)
@@ -230,11 +226,11 @@ export function trigger(
     // never been tracked
     return
   }
-  
+
   // 存储需要执行的effect
   const effects = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
-  // effectsToAdd => [effect1, effect2]
+    // effectsToAdd => [effect1, effect2]
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || effect.allowRecurse) {

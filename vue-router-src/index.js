@@ -41,7 +41,10 @@ export default class VueRouter {
     this.beforeHooks = []
     this.resolveHooks = []
     this.afterHooks = []
+    
+    // 返回一个 {match, addRoutes}
     this.matcher = createMatcher(options.routes || [], this)
+
 
     let mode = options.mode || 'hash' 
     this.fallback = mode === 'history' && !supportsPushState && options.fallback !== false

@@ -151,7 +151,7 @@ export function renderMixin (Vue: Class<Component>) {
   // code size.
   /*
     内部处理render的函数
-    这些函数会暴露在Vvue原型上以减小渲染函数大小
+    这些函数会暴露在Vue原型上以减小渲染函数大小
   */
   /*处理v-once的渲染函数*/
   Vue.prototype._o = markOnce

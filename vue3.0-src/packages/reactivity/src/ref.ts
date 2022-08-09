@@ -63,7 +63,8 @@ class RefImpl<T> {
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
-  get value() {  // babel 转义后 使用的是defineProperty
+  get value() {  
+    // babel 转义后 使用的是defineProperty
     // get value 的时候依赖依赖收集
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value

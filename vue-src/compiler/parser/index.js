@@ -293,6 +293,7 @@ export function parse (
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
           if (text === template) {
+            // 组件不能为纯文本
             warnOnce(
               'Component template requires a root element, rather than just text.'
             )
@@ -311,13 +312,24 @@ export function parse (
           currentParent.attrsMap.placeholder === text) {
         return
       }
+      // start 赋值
+      //  currentParent =element: ASTElement = {
+      //   type: 1,
+      //   tag,
+      //   attrsList: attrs,
+      //   attrsMap: makeAttrsMap(attrs),
+      //   parent: currentParent,
+      //   children: []
+      // }
       const children = currentParent.children
+      // 如果 currentParent标签不是 script 或者 style标签 就对标签进行转码
       text = inPre || text.trim()
         ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
         // only preserve whitespace if its not right after a starting tag
         : preserveWhitespace && children.length ? ' ' : ''
       if (text) {
         let expression
+        // parseText 对插值文本进行解析 解析插值 {{ text }}
         if (!inVPre && text !== ' ' && (expression = parseText(text, delimiters))) {
           children.push({
             type: 2,
@@ -325,6 +337,7 @@ export function parse (
             text
           })
         } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+          // 对纯文本进行解析
           children.push({
             type: 3,
             text

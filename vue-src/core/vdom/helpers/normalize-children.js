@@ -22,14 +22,14 @@ import { isDef, isUndef, isPrimitive } from 'shared/util'
 // because functional components already normalize their own children.
 
 // 1。当子组件——因为一个功能组件
-//可能返回一个数组而不是一个根。在这种情况下, 需要simple normalization,如果任何的子组件是一个数组
+//  可能返回一个数组而不是一个根。在这种情况下, 需要simple normalization,如果任何的子组件是一个数组
 // 我们用Array.prototype.concat平整件事情。保证只有1级深因为功能组件已经正常化自己的孩子。
 
 
 export function simpleNormalizeChildren (children: any) {
   // 这种只有vue  内部调用vm._c 的时候才会调用  内部调用的时候 节点都是vnode 
   // 如 _c('div',{}, ['1', ['2', ['3' , ['4']] ]])
-  // 最后会处理成 ['1', '2' , [3]]  减少一层遍历深度
+  // 最后会处理成 ['1', '2' , [3, ['4']]]  减少一层遍历深度
   // 将2层深度的数组 转换成一层
   for (let i = 0; i < children.length; i++) {
     if (Array.isArray(children[i])) {

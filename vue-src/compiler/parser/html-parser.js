@@ -95,6 +95,10 @@ export function parseHTML (html, options) {
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+
+        // <![if !IE]>
+        // <link href="non-ie.css" rel="stylesheet">
+        // <![endif]></link>
         if (conditionalComment.test(html)) {
           const conditionalEnd = html.indexOf(']>')
 
@@ -139,7 +143,9 @@ export function parseHTML (html, options) {
           !conditionalComment.test(rest)
         ) {
           // < in plain text, be forgiving and treat it as text
+          // 如果文本中也出现了 <  例如<div>exam < ple</div>
           next = rest.indexOf('<', 1)
+          // 直接跳过这个 < 
           if (next < 0) break
           textEnd += next
           rest = html.slice(textEnd)
@@ -224,6 +230,7 @@ export function parseHTML (html, options) {
     const unarySlash = match.unarySlash
 
     if (expectHTML) {
+      // 验证html5规范 p 标签内不能包含div等部分标签
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag)
       }
@@ -232,6 +239,7 @@ export function parseHTML (html, options) {
       }
     }
 
+    // isUnaryTag 自闭合标签
     const unary = isUnaryTag(tagName) || tagName === 'html' && lastTag === 'head' || !!unarySlash
 
     const l = match.attrs.length
@@ -253,7 +261,7 @@ export function parseHTML (html, options) {
         )
       }
     }
-
+    // 如果不是自闭合标签 将startTag添加到 stack里面
     if (!unary) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs })
       lastTag = tagName
@@ -275,6 +283,7 @@ export function parseHTML (html, options) {
 
     // Find the closest opened tag of the same type
     if (tagName) {
+      // 在其实标签的stack里 匹配 检查startTag是否有匹配对应的endTag
       for (pos = stack.length - 1; pos >= 0; pos--) {
         if (stack[pos].lowerCasedTag === lowerCasedTagName) {
           break

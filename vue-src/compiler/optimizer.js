@@ -59,7 +59,8 @@ function markStatic (node: ASTNode) {
     // 2. static slot content fails for hot-reloading
     /*
       不要使组件slot成为静态的，避免下面这两种情况：
-      1.
+      1.组件无法改变插槽节点
+      2.静态插槽内容无法进行热更新
     */
     if (
       !isPlatformReservedTag(node.tag) &&

@@ -19,14 +19,17 @@ export function normalizeLocation (
   }
 
   // relative params
+  // 更新 next 的属性
   if (!next.path && next.params && current) {
     next = assign({}, next)
     next._normalized = true
     const params: any = assign(assign({}, current.params), next.params)
     if (current.name) {
+      // 更新 name 和params
       next.name = current.name
       next.params = params
-    } else if (current.matched.length) {
+    } else if (current.matched.length) { 
+      // 如果匹配多个route path 就为最后一个匹配route的path
       const rawPath = current.matched[current.matched.length - 1].path
       next.path = fillParams(rawPath, params, `path ${current.path}`)
     } else if (process.env.NODE_ENV !== 'production') {

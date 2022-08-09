@@ -60,6 +60,7 @@ function addRouteRecord (
   }
 
   const pathToRegexpOptions: PathToRegexpOptions = route.pathToRegexpOptions || {}
+  // path做计算拼接
   const normalizedPath = normalizePath(
     path,
     parent,
@@ -70,6 +71,7 @@ function addRouteRecord (
     pathToRegexpOptions.sensitive = route.caseSensitive
   }
 
+  // 创建一个record
   const record: RouteRecord = {
     path: normalizedPath,
     regex: compileRouteRegex(normalizedPath, pathToRegexpOptions),
@@ -104,6 +106,7 @@ function addRouteRecord (
         )
       }
     }
+    // 对children 递归调用 addRouteRecord
     route.children.forEach(child => {
       const childMatchAs = matchAs
         ? cleanPath(`${matchAs}/${child.path}`)

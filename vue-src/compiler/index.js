@@ -124,7 +124,7 @@ export function createCompiler (baseOptions: CompilerOptions) {
 
     // check cache
     /*有缓存的时候直接取出缓存中的结果即可*/
-    const key = options.delimiters
+    const key = options.delimiters // 纯文本插入分隔符
       ? String(options.delimiters) + template
       : template
     if (functionCompileCache[key]) {
