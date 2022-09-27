@@ -208,12 +208,20 @@ export function generate(
   // preambles
   // in setup() inline mode, the preamble is generated in a sub context
   // and returned separately.
+  // 在setup（）内联模式下，前导码在子上下文中生成并单独返回
   const preambleContext = isSetupInlined
     ? createCodegenContext(ast, options)
     : context
   if (!__BROWSER__ && mode === 'module') {
     genModulePreamble(ast, preambleContext, genScopeId, isSetupInlined)
   } else {
+    // 生成前置代码
+    // 如 静态节点提升  api导入
+    /**
+       const _Vue = Vue
+       const { createVNode: _createVNode } = _Vue
+       const _hoisted_1 = { id: "app" }
+    */
     genFunctionPreamble(ast, preambleContext)
   }
 
@@ -248,6 +256,7 @@ export function generate(
     indent()
     // function mode const declarations should be inside with block
     // also they should be renamed to avoid collision with user properties
+    // 函数模式常量声明应该包含在width块中，还应该重命名它们以避免与用户属性冲突
     if (hasHelpers) {
       push(
         `const { ${ast.helpers
@@ -260,6 +269,9 @@ export function generate(
   }
 
   // generate asset resolution statements
+
+  // 生成一些内置功能的导出语句
+  // 如 使用了transition   const { transition: _transition } = _vue
   if (ast.components.length) {
     genAssets(ast.components, 'component', context)
     if (ast.directives.length || ast.temps > 0) {
@@ -288,6 +300,8 @@ export function generate(
     push(`return `)
   }
   if (ast.codegenNode) {
+    // 生成render函数
+    // ****** 生成核心渲染代码
     genNode(ast.codegenNode, context)
   } else {
     push(`null`)
@@ -323,15 +337,29 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     runtimeModuleName,
     runtimeGlobalName
   } = context
+  // 生成代码 vue 导入方式
   const VueBinding =
     !__BROWSER__ && ssr
       ? `require(${JSON.stringify(runtimeModuleName)})`
       : runtimeGlobalName
+
+  // 产生引用方法代码块 const { createVNode: _createVNode } = _Vue
   const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
   // with block so it doesn't incur the `in` check cost for every helper access.
+
+  /**
+    为helper生成const声明在前缀模式下
+    我们将const声明放在顶部，因此只执行一次
+    但是如果我们不加前缀
+    我们将声明放在with块中
+    这样它就不会为每个helper访问产生“in”检查成本
+
+     const { createVNode: _createVNode } = _Vue
+     没必要放在 with {} 代码块中 可以减少访问属性 in查询的成本
+  */
   if (ast.helpers.length > 0) {
     if (!__BROWSER__ && prefixIdentifiers) {
       push(
@@ -344,6 +372,16 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       // in "with" mode, helpers are declared inside the with block to avoid
       // has check cost, but hoists are lifted out of the function - we need
       // to provide the helper here.
+      /**
+        在“with”模式下，
+        helper在with块中声明，会有查询属性的性能问题，
+        这里提供了 helper 静态提升的一些方法
+          with (_ctx) {
+            const { toDisplayString: _toDisplayString } = _Vue
+            toDisplayString 就不会再_ctx上查找引起性能问题
+          }
+      
+      */
       if (ast.hoists.length) {
         const staticHelpers = [
           CREATE_VNODE,

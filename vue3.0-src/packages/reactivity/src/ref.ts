@@ -56,14 +56,14 @@ class RefImpl<T> {
   // ref实例
   private _value: T
 
-  public readonly __v_isRef = true  // ref标识
+  public readonly __v_isRef = true // ref标识
 
   constructor(private _rawValue: T, public readonly _shallow = false) {
     // 如果是深度监听对象 最后还是会调用 reactive()
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
-  get value() {  
+  get value() {
     // babel 转义后 使用的是defineProperty
     // get value 的时候依赖依赖收集
     track(toRaw(this), TrackOpTypes.GET, 'value')
@@ -80,6 +80,8 @@ class RefImpl<T> {
 }
 
 // 创建一个ref对象
+// 一般ref 对象要通过 ref.value访问对应的值
+// 解包后课直接通过ref 访问
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
@@ -108,6 +110,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
+// ref 解包函数
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {

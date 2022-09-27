@@ -75,9 +75,12 @@ export function patchEvent(
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // 创建一个调用函数 这个函数内部调用了用户传入的函数 如果用户传如的函数改变了 调用的函数也会改变
+      // 主要是做事件缓存 更新时只需要更新调用的函数
+      // 不用频繁的 addEventListener 和 removeEventListener
       /**
        *   function invoker() {  invoker.value() }
-       *    invoker.value = customFn
+       *   invoker.value = customFn
+           更新 invoker.value 就可以直接修改调用函数 
        *  addEventListener(el, name, invoker)
        */
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
@@ -119,6 +122,25 @@ function createInvoker(
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
     // 创建一个函数
+    /**
+     * 
+      给事件创建一个时间戳 invoker.attached = getNow()
+      这个时间戳用于保存事件绑定事件
+      flag 默认为一个false的响应值
+      <div @click="flag ? event1 : null" >
+        <p @click="flag = true">
+          绑定事件
+        </p>
+      </div>
+      初始化渲染的时候默认不会在div上绑定 event1
+      当点击p元素的时候 也会触发event1
+      因为 div 元素绑定事件处理函数发生在事件冒泡之前(微任务的优先级是更高的，是会优先于事件冒泡的, 点击p元素,触发更新队列, 更新队列更新完绑定了事件, 再触发了事件冒泡)
+      这种情况违反用户直觉的
+      为了解决这种问题, 绑定事件时候给一个时间戳 attached
+      触发事件的时候 效验事件
+      所有触发时间在绑定事件之前的都过滤掉
+      只触发 绑定之后触发的时间
+     */
     const timeStamp = e.timeStamp || _getNow()
     if (timeStamp >= invoker.attached - 1) {
       callWithAsyncErrorHandling(

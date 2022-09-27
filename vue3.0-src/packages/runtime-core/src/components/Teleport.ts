@@ -83,16 +83,22 @@ export const TeleportImpl = {
 
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
+    debugger
     // 挂载节点
     if (n1 == null) {
       // insert anchors in the main view
+      // 在主视图中插入锚点
+
       // 根据环境创建节点
+      // 默认创建一个占位节点
       const placeholder = (n2.el = __DEV__
         ? createComment('teleport start')
         : createText(''))
+      // 再创建一个锚点节点
       const mainAnchor = (n2.anchor = __DEV__
         ? createComment('teleport end')
         : createText(''))
+      // 把节点挂载在渲染组件的容器中
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
       // 找到需要挂载的节点
@@ -109,6 +115,7 @@ export const TeleportImpl = {
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
+        // children 必须是个数组
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
             children as VNodeArrayChildren,
@@ -123,8 +130,11 @@ export const TeleportImpl = {
       }
 
       if (disabled) {
+        // 如果禁用了 Teleport
+        // 直接将 子元素 挂载在容器中的锚点之前
         mount(container, mainAnchor)
       } else if (target) {
+        // 直接将 子元素 挂载在目标节点中的锚点之前
         mount(target, targetAnchor)
       }
     } else {
@@ -152,6 +162,7 @@ export const TeleportImpl = {
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
         // be moved in future patches.
+        // 即使在block tree模式下，我们也需要确保传输中的所有根级节点继承以前的DOM引用，以便在将来的补丁中移动它们
         traverseStaticChildren(n1, n2, true)
       } else if (!optimized) {
         patchChildren(
@@ -179,12 +190,14 @@ export const TeleportImpl = {
         }
       } else {
         // target changed
+        // 如果 to 修改了
         if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
           const nextTarget = (n2.target = resolveTarget(
             n2.props,
             querySelector
           ))
           if (nextTarget) {
+            // 移动到新的目标节点
             moveTeleport(
               n2,
               nextTarget,

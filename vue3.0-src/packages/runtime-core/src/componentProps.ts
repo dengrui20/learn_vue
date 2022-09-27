@@ -137,6 +137,7 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
+  // 设置props
   setFullProps(instance, rawProps, props, attrs)
   // validation
   if (__DEV__) {
@@ -145,10 +146,12 @@ export function initProps(
 
   if (isStateful) {
     // stateful
+    // web端 浅响应 props值
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!instance.type.props) {
       // functional w/ optional props, props === attrs
+      // 函数式组件 如果没有 props 直接复用attrs
       instance.props = attrs
     } else {
       // functional w/ declared props
@@ -278,11 +281,16 @@ function setFullProps(
     for (const key in rawProps) {
       const value = rawProps[key]
       // key, ref are reserved and never passed down
+      // key和 ref 是保留字段 不会向下传递
       if (isReservedProp(key)) {
         continue
       }
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
+      // 属性选项名称在规范化过程中被驼峰，因此为了支持kebab->camel转换，这里我们需要驼峰
+      // 格式化属性名字
+      // 如 <custom-comp max-age="11"></custom-comp>
+      // 最后获取的时候 会转成小驼峰 props.maxAge
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
         props[camelKey] = value
@@ -290,12 +298,16 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
+        // 放置任何未声明的（props或emit属性放入 attrs 确保保留原始属性
+        // 如 <custom-comp age="11"></custom-comp>
+        // 但是内部没在props选项组声明这个属性 就会保存在attrs中
         attrs[key] = value
       }
     }
   }
 
   if (needCastKeys) {
+    // 需要转化的value的 props
     const rawCurrentProps = toRaw(props)
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
@@ -319,11 +331,13 @@ function resolvePropValue(
 ) {
   const opt = options[key]
   if (opt != null) {
+    // 查看是否配置了 defult 默认值
     const hasDefault = hasOwn(opt, 'default')
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
+        // 如果 type 不是 Funciton 并且 default配置的是一个函数 执行配置的 .default 返回结果
         setCurrentInstance(instance)
         value = defaultValue(props)
         setCurrentInstance(null)
@@ -332,12 +346,20 @@ function resolvePropValue(
       }
     }
     // boolean casting
+    // 如果type 配置了 Boolean
     if (opt[BooleanFlags.shouldCast]) {
       if (!hasOwn(props, key) && !hasDefault) {
+        // props 没有对应的key 并且没有默认的 default
+        // 直接给false
         value = false
       } else if (
+        // 配置了 Boolean 和String 但是Boolean在前面
+        // 或者配置了 Boolean 没有配置 String
         opt[BooleanFlags.shouldCastTrue] &&
         (value === '' || value === hyphenate(key))
+        // hyphenate 将 AB 转换成 a-b
+        // 如果value 为空 或者 key和转换后的属性相同 如 a-b="a-b"
+        // 默认给值为true
       ) {
         value = true
       }
@@ -352,6 +374,7 @@ export function normalizePropsOptions(
   asMixin = false
 ): NormalizedPropsOptions {
   if (!appContext.deopt && comp.__props) {
+    // 有缓存直接返回
     return comp.__props
   }
 
@@ -360,21 +383,26 @@ export function normalizePropsOptions(
   const needCastKeys: NormalizedPropsOptions[1] = []
 
   // apply mixin/extends props
+  // 处理 mixin/ extends 的props
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
       hasExtends = true
+      // 递归处理 mixin/ extends 选项里面的 mixin/ extends
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
       extend(normalized, props)
       if (keys) needCastKeys.push(...keys)
     }
     if (!asMixin && appContext.mixins.length) {
+      // 合并 全局混入的 mixin
       appContext.mixins.forEach(extendProps)
     }
     if (comp.extends) {
+      // 合并 extends
       extendProps(comp.extends)
     }
     if (comp.mixins) {
+      // 合并 mixins
       comp.mixins.forEach(extendProps)
     }
   }
@@ -384,12 +412,15 @@ export function normalizePropsOptions(
   }
 
   if (isArray(raw)) {
+    // 如果 props 是个数组
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
         warn(`props must be strings when using array syntax.`, raw[i])
       }
+      // 属性名格式化成小驼峰
       const normalizedKey = camelize(raw[i])
       if (validatePropName(normalizedKey)) {
+        // 验证props是不是保留的key
         normalized[normalizedKey] = EMPTY_OBJ
       }
     }
@@ -397,19 +428,38 @@ export function normalizePropsOptions(
     if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
+    // props 是个对象
     for (const key in raw) {
+      // 属性名格式化成小驼峰
       const normalizedKey = camelize(key)
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
+        /**
+         * 
+          props: {
+            三种配置选项方式
+            age: [ 'number' ] || () => isNaN() || Number || { type: Number }
+          }
+
+         */
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
         if (prop) {
+          // 配置项里 配置Boolean 的索引
           const booleanIndex = getTypeIndex(Boolean, prop.type)
+          // 配置项里 配置String 的索引
           const stringIndex = getTypeIndex(String, prop.type)
+
+          // prop['shouldCast'] = true || false
           prop[BooleanFlags.shouldCast] = booleanIndex > -1
+
+          // prop['shouldCastTrue'] = true || false
+          // 如果同时配置了 只 配置 Boolean 没有配置 String 或者 booleanIndex在 stringIndex 前面
           prop[BooleanFlags.shouldCastTrue] =
             stringIndex < 0 || booleanIndex < stringIndex
           // if the prop needs boolean casting or default value
+          // 如果给了默认值 并且 配置了type 为 Boolean
+          // 需要把default 转换成 布尔值
           if (booleanIndex > -1 || hasOwn(prop, 'default')) {
             needCastKeys.push(normalizedKey)
           }

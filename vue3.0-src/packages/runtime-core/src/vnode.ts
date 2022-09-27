@@ -360,7 +360,7 @@ function _createVNode(
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
-       // mutated
+      // mutated
       if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
@@ -465,6 +465,7 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
+
   const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   return {
@@ -570,7 +571,7 @@ export function createCommentVNode(
 }
 
 // 对一些特殊节点格式化
-export function normalizeVNode(child: VNodeChild): VNode { 
+export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)
@@ -583,7 +584,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return child.el === null ? child : cloneVNode(child)
   } else {
     // strings and numbers
-    // 创建文本节点 
+    // 创建文本节点
     return createVNode(Text, null, String(child))
   }
 }

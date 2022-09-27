@@ -281,12 +281,19 @@ export function createTransformContext(
 }
 
 export function transform(root: RootNode, options: TransformOptions) {
+  // 创建上下文
   const context = createTransformContext(root, options)
+
+  // 深度优先遍历每个node
+  // 对每个node 执行不同的transform 函数 对不同的node进行转换(应用transform 插件)
   traverseNode(root, context)
+
   if (options.hoistStatic) {
+    // 对静态节点进行静态提升
     hoistStatic(root, context)
   }
   if (!options.ssr) {
+    // 创建根节点 nodeCodegen
     createRootCodegen(root, context)
   }
   // finalize meta information
@@ -305,12 +312,18 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   if (children.length === 1) {
     const child = children[0]
     // if the single child is an element, turn it into a block.
+    // 如果只有一个子元素 将其转换为 block
+
     if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
+      // 单个根元素永远不会被提升，所以codegenNode永远不会是SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         codegenNode.isBlock = true
+        // 创建标识
+        // context.helpers.add(OPEN_BLOCK)
+        // context.helpers.add(CREATE_BLOCK)
         helper(OPEN_BLOCK)
         helper(CREATE_BLOCK)
       }

@@ -101,6 +101,7 @@ export function advancePositionWithClone(
 
 // advance by mutation without cloning (for performance reasons), since this
 // gets called a lot in the parser
+// advancePositionWithMutation 根据字符串内的换行符换行进行重新定位
 export function advancePositionWithMutation(
   pos: Position,
   source: string,

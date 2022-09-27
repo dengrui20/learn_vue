@@ -1,27 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src="../dist/reactivity.global.js"></script> 
+  <script src="../dist/reactivity.global.js"></script>
 </head>
+
 <body>
+  <input disabled="" value="111"></input>
   <div></div>
   <script>
-    let { effect, reactive } = VueReactivity
-    const state = reactive({
-      count: 1,
-      name: '小明'
-    })
+    let { effect, reactive, ref, toRef } = VueReactivity
+    // let obj = { a: 1 }
+    // let child = new Proxy(obj, {
+    //   set(target, key, val, rec) {
+    //     console.log('child set', rec)
+    //     target[key] = val
+    //   },
+    //   get(target, key) {
+    //     return target[key]
+    //   }
+    // })
+
+
+
+    // let protoProxy = new Proxy({ a: 1, b: 2 }, {
+    //   set(target, key, val, rec) {
+    //     console.log('protoProxy set', rec)
+    //     if (rec === child)
+    //       target[key] = val
+    //   },
+    //   get(target, key) {
+    //     return target[key]
+    //   }
+    // })
+    // Object.setPrototypeOf(child, protoProxy)
+    // child.b = 3
+    // Reflect.set(child, 'b', 3, obj)
+    // console.log(child.b, protoProxy.b)
+
+
+    /*****************************/
+    // let obj = { a: 1 }
+    // let proxy = reactive(obj)
+    // effect(() => {
+    //   console.log(proxy.a)
+    // })
+    // proxy.a = 2
+
+    /********************/
+
+    let obj = toRef({ a: 1 }, 'a')
     effect(() => {
-      console.log(state.count, state.name)
+      console.log(obj.value)
     })
-    setTimeout(() => {
-      state.count++
-      state.name ="小红"
-    }, 2000);
+
+    obj.value++
+
+    console.log(obj.value)
+
+
   </script>
 </body>
+
 </html>

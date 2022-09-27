@@ -169,7 +169,7 @@ function doWatch(
         `a reactive object, or an array of these types.`
     )
   }
-  
+
   // watch 3种使用方式
   /*
     1. watch(() => state.count,(count, prevCount) => {})
@@ -193,7 +193,6 @@ function doWatch(
       source.map(s => {
         // 对 1、 2 2种情况进行处理
         if (isRef(s)) {
-        
           return s.value
         } else if (isReactive(s)) {
           // 递归对象取值
@@ -239,7 +238,7 @@ function doWatch(
     __DEV__ && warnInvalidSource(source)
   }
 
-    // 如果是深度监听 getter 就会递归求值
+  // 如果是深度监听 getter 就会递归求值
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
@@ -305,7 +304,7 @@ function doWatch(
     // 创建同步scheduler
     scheduler = job
   } else if (flush === 'post') {
-    // 进入异步队列，组件更新后执行 
+    // 进入异步队列，组件更新后执行
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
@@ -317,7 +316,7 @@ function doWatch(
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.
 
-        // 如果组件还没挂载，则同步执行确保在组件挂载前 
+        // 如果组件还没挂载，则同步执行确保在组件挂载前
         job()
       }
     }

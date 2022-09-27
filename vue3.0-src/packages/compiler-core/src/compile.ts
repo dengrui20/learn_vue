@@ -78,10 +78,12 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
+  // 语法分析 baseParse
   const ast = isString(template) ? baseParse(template, options) : template
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
     prefixIdentifiers
   )
+  // 转换成js Ast
   transform(
     ast,
     extend({}, options, {
@@ -98,6 +100,7 @@ export function baseCompile(
     })
   )
 
+  // 生成代码
   return generate(
     ast,
     extend({}, options, {

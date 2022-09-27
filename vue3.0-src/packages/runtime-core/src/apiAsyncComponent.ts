@@ -38,6 +38,7 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
+// 异步组件
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -55,7 +56,9 @@ export function defineAsyncComponent<
     onError: userOnError
   } = source
 
+  // 等待的请求
   let pendingRequest: Promise<ConcreteComponent> | null = null
+  // 需要加载的组件
   let resolvedComp: ConcreteComponent | undefined
 
   let retries = 0
@@ -71,9 +74,11 @@ export function defineAsyncComponent<
       pendingRequest ||
       (thisRequest = pendingRequest = loader()
         .catch(err => {
+          // 加载失败
           err = err instanceof Error ? err : new Error(String(err))
           if (userOnError) {
             return new Promise((resolve, reject) => {
+              // 向  userOnError 回调 提供重试加载接口
               const userRetry = () => resolve(retry())
               const userFail = () => reject(err)
               userOnError(err, userRetry, userFail, retries + 1)
@@ -93,6 +98,7 @@ export function defineAsyncComponent<
             )
           }
           // interop module default
+          // 组件加载成功
           if (
             comp &&
             (comp.__esModule || comp[Symbol.toStringTag] === 'Module')
@@ -115,7 +121,9 @@ export function defineAsyncComponent<
       const instance = currentInstance!
 
       // already resolved
+      // 已经加载好组件
       if (resolvedComp) {
+        // 渲染加载成功的组件
         return () => createInnerComp(resolvedComp!, instance)
       }
 
@@ -154,12 +162,17 @@ export function defineAsyncComponent<
       const delayed = ref(!!delay)
 
       if (delay) {
+        // 延迟渲染
+        // delayed.value 为false
+        // 就算加载成功渲染的依然是pending 组件
+        // 等delayed.value 修改 为true 后 会重新渲染成加载后的组件
         setTimeout(() => {
           delayed.value = false
         }, delay)
       }
 
       if (timeout != null) {
+        // 超过指定时间 并且没有加载完成, 渲染error组件
         setTimeout(() => {
           if (!loaded.value && !error.value) {
             const err = new Error(
@@ -171,8 +184,10 @@ export function defineAsyncComponent<
         }, timeout)
       }
 
+      // 加载组件
       load()
         .then(() => {
+          // 加载完成 触发组件更新
           loaded.value = true
         })
         .catch(err => {
@@ -182,12 +197,15 @@ export function defineAsyncComponent<
 
       return () => {
         if (loaded.value && resolvedComp) {
+          // 加载结束 渲染加载完成的组件
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
+          // 加载失败 渲染 error的 vnode
           return createVNode(errorComponent as ConcreteComponent, {
             error: error.value
           })
         } else if (loadingComponent && !delayed.value) {
+          // 默认渲染加载中的的组件
           return createVNode(loadingComponent as ConcreteComponent)
         }
       }

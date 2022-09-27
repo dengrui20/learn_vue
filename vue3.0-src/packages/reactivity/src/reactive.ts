@@ -191,7 +191,7 @@ function createReactiveObject(
   // target already has corresponding Proxy
   const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
-  // 如果已经被响应式代理 找到缓存的数据直接返回
+  // 如果已经被响应式代理 找到缓存的代理对象直接返回
   if (existingProxy) {
     return existingProxy
   }

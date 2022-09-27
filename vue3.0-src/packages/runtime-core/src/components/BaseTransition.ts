@@ -167,13 +167,17 @@ const BaseTransitionImpl = {
       // at this point children has a guaranteed length of 1.
       const child = children[0]
       if (state.isLeaving) {
+        // 占位符实际上只处理一种特殊情况：KeepAlive在离开阶段的KeepAlive-我们需要返回一个包含空内容的KeepLive占位符，以避免卸载KeepAliive实例。
         return emptyPlaceholder(child)
       }
 
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
+      // 比较子元素的保活类型 获取keepAlive的子元素
       const innerChild = getKeepAliveChild(child)
       if (!innerChild) {
+        // 如果没有获取到keepAlive的子元素
+        // 创建一个keepAlive的占位符
         return emptyPlaceholder(child)
       }
 
@@ -213,11 +217,13 @@ const BaseTransitionImpl = {
           instance
         )
         // update old tree's hooks in case of dynamic transition
-        setTransitionHooks(oldInnerChild, leavingHooks)
+        // 更新就节点上的动态transition
+        setTransitionHooks(oldInnerChild, leavingHooks) // oldInnerChild.transition = leavingHooks
         // switching between different views
         if (mode === 'out-in') {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
+          // 离开结束时返回占位符节点和队列更新
           leavingHooks.afterLeave = () => {
             state.isLeaving = false
             instance.update()
@@ -234,7 +240,7 @@ const BaseTransitionImpl = {
               oldInnerChild
             )
             leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
-            // early removal callback
+            // early removal callback 提前删除的回调
             el._leaveCb = () => {
               earlyRemove()
               el._leaveCb = undefined
@@ -422,6 +428,7 @@ export function resolveTransitionHooks(
 // in the case of a KeepAlive in a leave phase we need to return a KeepAlive
 // placeholder with empty content to avoid the KeepAlive instance from being
 // unmounted.
+// 占位符实际上只处理一种特殊情况：KeepAlive在离开阶段的KeepAlive-我们需要返回一个包含空内容的KeepLive占位符，以避免卸载KeepAliive实例。
 function emptyPlaceholder(vnode: VNode): VNode | undefined {
   if (isKeepAlive(vnode)) {
     vnode = cloneVNode(vnode)

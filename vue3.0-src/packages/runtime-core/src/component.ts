@@ -409,6 +409,7 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
+  // 继承父组件的上下文 如果是根组件 则继承根节点的vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
@@ -524,8 +525,11 @@ export function setupComponent(
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode
+  // 判断是否是一个有状态的组件
   const isStateful = isStatefulComponent(instance)
+  // 初始化props
   initProps(instance, props, isStateful, isSSR)
+  // 初始化 slots
   initSlots(instance, children)
 
   const setupResult = isStateful
@@ -564,6 +568,7 @@ function setupStatefulComponent(
   // also mark it raw so it's never observed
   // 创建公共实例/渲染代理也将其标记为原始，这样就不会观察到它
   // 用户 render里的回调参数
+  // options api 里面的this
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
@@ -577,7 +582,7 @@ function setupStatefulComponent(
 
     currentInstance = instance
     pauseTracking() // 暂停依赖收集
-    
+
     // 执行setup方法获取返回结果
     const setupResult = callWithErrorHandling(
       setup,
@@ -673,12 +678,11 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
- // 处理render 函数 并且做2.0兼容处理
+// 处理render 函数 并且做2.0兼容处理
 function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean
 ) {
-
   const Component = instance.type as ComponentOptions
 
   // template / render function normalization

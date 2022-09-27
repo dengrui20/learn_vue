@@ -41,13 +41,19 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       break
     default:
       if (isOn(key)) {
-       
         // ignore v-model listeners
         if (!isModelListener(key)) {
           //  如果是事件 并且不是v-model事件 去更新事件
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (shouldSetAsProp(el, key, nextValue, isSVG)) {
+        // 判断是不是可以设置的props 如果是的 更新dom prop
+        /**
+        如 <div id="app" customProp="222">
+        div.id = 'app2' 这种属性即可以获取 也可以设置
+        div.customProp = 'a' 设置是无效的 所以需要手动调用 setAttribute 去修改 走else 逻辑
+        
+        */
         patchDOMProp(
           el,
           key,
@@ -108,6 +114,10 @@ function shouldSetAsProp(
   // #1787, #2840 the form property is readonly and can only be set as an
   // attribute using a string value
   if (key === 'form' && isFormTag(el.tagName)) {
+    /**
+      很多表单标签的 form 属性是只读的
+      如 <input form="form1" />
+    */
     return false
   }
 

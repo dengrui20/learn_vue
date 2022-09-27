@@ -48,6 +48,7 @@ import {
 } from './ssrTransformSuspense'
 import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
+import { debug } from 'node:console'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until

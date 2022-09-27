@@ -52,12 +52,23 @@ function walk(
   // @vue/compiler-dom), but doing it here allows us to perform only one full
   // walk of the AST and allow `stringifyStatic` to stop walking as soon as its
   // stringficiation threshold is met.
+  /**
+   * 
+    有些转换，例如@vue/compiler-sfc中的transformAssetUrls，用表达式替换静态绑定。
+    这些表达式保证是常量，因此它们仍然可以被提升，但它们仅在运行时可用，因此不能提前计算。
+
+    这只是一个关于预字符串化的问题（通过transformHoist by@vue/compiler-dom),
+    但在这里这样做只允许我们执行AST的一次完整遍历,
+    并允许“stringifyStatic”在满足字符串分割阈值后立即停止遍历。
+
+   */
   let canStringify = true
 
   const { children } = node
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for hoisting.
+    // 只有真实的元素或者纯文本才会进行提升
     if (
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT

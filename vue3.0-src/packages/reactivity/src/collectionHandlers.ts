@@ -67,6 +67,11 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
 
 function size(target: IterableCollections, isReadonly = false) {
   target = (target as any)[ReactiveFlags.RAW]
+  // 如果获取的size属性 则收集对应特殊标识的依赖
+  /***
+   *   并且.size 是个访问器 访问器内部访问的this必须指向原始值才能获取size 否则会报错
+   *
+   */
   !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
   return Reflect.get(target, 'size', target)
 }
@@ -75,16 +80,33 @@ function add(this: SetTypes, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
   const proto = getProto(target)
+  // 判断属性是否存在
   const hadKey = proto.has.call(target, value)
   target.add(value)
   if (!hadKey) {
+    // 不存再的情况下才触发更新
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
   return this
 }
 
 function set(this: MapTypes, key: unknown, value: unknown) {
+  /***
+   * 防止把响应的数据设置到原始数据上造成数据污染
+   *
+   * const m = new Map()
+   * const p = reactive(m)
+   * const p2 = reactive(new Map())
+   * p1.set('p2', p2)
+   * effect(() => console.log(p1.gey('p2').size))
+   * m.get('p2').set('a', 1)
+   * 最后 会触发effect   m作为一个未响应的值 不应触发
+   * 原因是p1.set('p2', p2)时候 p2作为一个响应的值直接赋值给了m
+   * 所以 m.get('p2')不是一个原始的map 而是一个代理后的map
+   * 为了避免这种情况 赋值的时候要把value 转成代理前的对象
+   */
   value = toRaw(value)
+
   const target = toRaw(this)
   const { has, get } = getProto(target)
 
@@ -152,11 +174,22 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     const target = observed[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
+    /***
+     * 同遍历时给原始值设置一个 标识 TrackOpTypes.ITERATE
+     * 并且对其进行依赖收集
+     * 当对响应对象进行 添加和删除的时候 触发 对应的effect
+     *
+     */
     !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
     return target.forEach((value: unknown, key: unknown) => {
       // important: make sure the callback is
       // 1. invoked with the reactive map as `this` and 3rd arg
       // 2. the value received should be a corresponding reactive/readonly.
+      /***
+       *  保证forEach((key, val) => {})
+       *  回调的参数都是响应式的 所以需要进行响应式操作
+       *
+       */
       return callback.call(thisArg, wrap(value), wrap(key), observed)
     })
   }
@@ -193,6 +226,15 @@ function createIterableMethod(
     const innerIterator = target[method](...args)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
     !isReadonly &&
+      /***
+       * 因为迭代器的次数和元素的数量有关
+       * 所以迭代的时候需要和 TrackOpTypes.ITERATE 建立联系
+       * 迭代对象元素数量变化的时候 会触发 对应的effect
+       *  MAP_KEY_ITERATE_KEY 是 在获取keys的时候的特殊标识
+       * 因为keys 只关心key 是否有改变 不会关心值是否有改变
+       * 和  entries, values(会关心值是否有改变)  关注点不同 所以要特殊处理
+       *  (new Map()).keys(() => {})
+       */
       track(
         rawTarget,
         TrackOpTypes.ITERATE,
@@ -200,6 +242,12 @@ function createIterableMethod(
       )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
+    /**
+     * 返回一个迭代器对象
+     * for of 遍历代理对象的时候 代理对象没有实现 Symbol.iterator 方法
+     * 所以需要手动实现一个迭代器
+     */
+
     return {
       // iterator protocol
       next() {
@@ -281,6 +329,7 @@ const readonlyInstrumentations: Record<string, Function> = {
 
 const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
 iteratorMethods.forEach(method => {
+  // 迭代器方法
   mutableInstrumentations[method as string] = createIterableMethod(
     method,
     false,

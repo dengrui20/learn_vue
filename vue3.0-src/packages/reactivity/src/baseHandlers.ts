@@ -49,9 +49,19 @@ const arrayInstrumentations: Record<string, Function> = {}
   // effect(() => {
   //   console.log(arr.includes(x))
   // })
-  // 当 a b c改变了都要触发更新 所以需要对数组的每一项进行依赖收集 
+  // 当 a b c改变了都要触发更新 所以需要对数组的每一项进行依赖收集
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+    /***
+     * let obj = {}
+     * let arr = [obj]
+     * let arrProxy = reactive(arr)
+     * arrProxy.includes(obj) // false
+     * 因为reactive会深度代理 arrProxy[0] 其实不是原始的obj 而是个obj的代理对象
+     * arrProxy.includes(obj) 最后为false
+     * 为了解决这种情况 需要找到arrProxy的原始值arr 然后用 arr.includes(obj)
+     * 这样就可以返回正常的结果
+     */
     const arr = toRaw(this) // toRaw 可以把响应式对象转成原始数据
     for (let i = 0, l = this.length; i < l; i++) {
       // 对数组的每一项都进行依赖收集
@@ -76,7 +86,7 @@ const arrayInstrumentations: Record<string, Function> = {}
  *  effect(() => arr.push(2)) length改变 会触发 effect1
  *  调用改变数组方法的时候 会改变数组的length 这时候会访问length  对length进行依赖收集
  *  length 改变又会触发effect
- *  这样会导致无限调用 
+ *  这样会导致无限调用
  *  所以调用改变数组的一些方法的时候不能进行依赖收集
  */
 ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
@@ -115,7 +125,7 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
-    // 如果是内置的symbol 或者是原型链查找到的 直接返回 
+    // 如果是内置的symbol 或者是原型链查找到的 直接返回
     // 不会对这些值进行依赖收集 比如__proto__
     if (
       isSymbol(key)
@@ -135,14 +145,14 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    if (isRef(res)) { 
+    if (isRef(res)) {
       // 如果这个值是ref 则直接返回ref对象的value
       /**
-       * let state = reactive({a: ref(1)}) 
+       * let state = reactive({a: ref(1)})
        * ref取值应该带value
        * state.a.value
        * 处理后State.a 会直接返回对应的value
-       * 
+       *
        * 但是
        * let state = reactive([ref(1)])
        * state[0].value
@@ -155,7 +165,7 @@ function createGetter(isReadonly = false, shallow = false) {
 
     if (isObject(res)) {
       // Convert returned value into a proxy as well. we do the isObject check  将返回值也转换为代理。我们做isObject检查
-      // here to avoid invalid value warning. Also need to lazy access readonly 
+      // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.  此处避免出现无效值警告。这里还需要延迟访问readonly和reactive，以避免循环依赖
       // 递归代理
       // 这一步只有取值时才会递归代理 vue2.0 在一开始就会递归代理 相对性能会更高
@@ -180,15 +190,15 @@ function createSetter(shallow = false) {
     const oldValue = (target as any)[key]
     if (!shallow) {
       // 如果对象被深层代理了
-      value = toRaw(value) 
+      value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         // 如果不是数组 && 旧值是ref && 新值不是ref
         /**
-         * 如 let state = reactive({ a: ref(1) }) 
+         * 如 let state = reactive({ a: ref(1) })
          * state.a = 1
          * 这时候改的其实是 state.a.value = 1
          *
-        */
+         */
         oldValue.value = value
         return true
       }
@@ -196,7 +206,7 @@ function createSetter(shallow = false) {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
-    // 在target上查找 是否存在当前的key 
+    // 在target上查找 是否存在当前的key
     // 对数组进行特殊处理
     // target是个数组 && key是一个整形的(数字或者字符串)
     // key > length 则不存在当前的key
@@ -207,6 +217,7 @@ function createSetter(shallow = false) {
         : hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
+    // 如果目标是原始原型链中的某个对象，则不触发
     if (target === toRaw(receiver)) {
       /**
        * 对原型链做代理进行特殊处理
@@ -215,40 +226,48 @@ function createSetter(shallow = false) {
        * let proxyProto = new Proxy(proto, {
        *   get() {},
        *   set(target, key, value, receiver) {
+       *    target = proto
        *    receiver === myProxy => true **************
+       *     target !== toRaw(receiver)
        *   }
        * })
-       * 
+       *
        * 改变obj的原型 指向被代理后的proxyProto
        * Object.setPrototypeOf(obj, proxyProto)
-       * 
+       *
        * let myProxy = new Proxy(obj, {
        *  get() {},
        *  set(target, key, value, receiver) {
-       *    receiver === myProxy => true ***********8
+       *    target = obj
+       *    receiver === myProxy => true ***********
+       *    target === toRaw(receiver)
        *  }
        * })
-       * myProxy.a = 100
-       * 
-       * myProxy.a 
-       * 先触发myProxy.get 不存在 会顺着原型链向上查找
-       * 触发了proxyProto.get
-       * 触发了2次get
-       *  
+       *
+       *  Reflect.set(myProxy, 'a', 100, myProxy)
+       * myProxy.a
+       * 先触发myProxy.set 不存在 会顺着原型链向上查找
+       * 触发了proxyProto.set
+       * 触发了2次set
+       * 最后  myProxy.a 和 myProxy.a  的值都为100
        * target === toRaw(receiver)
        * 通过判断
-       * target => obj  
+       * target => obj
+       * myProxy[[set]] 里面的target 为 obj, receiver 为 toRaw(receiver) 为 obj
+       * 所以 Reflect.set(myProxy, 'a', 100, myProxy) 可以触发 myProxy的set执行逻辑
+       * proxyProto[[set]] 里面的target 为 proto, receiver 为 toRaw(receiver) 为 obj 不相等 所以不会触发set里面的执行逻辑
        * toRaw(receiver) => 被代理前的原始值
        * 这样就会避免这种极端情况触发
-       * 
-       * 
-      */
+       *
+       *
+       */
 
       if (!hadKey) {
         // 如果 不存在key 就是新增 否则就是 修改值
         // trigger 触发对应操作执行的流程
         trigger(target, TriggerOpTypes.ADD, key, value)
-      } else if (hasChanged(value, oldValue)) {// 如果新值和旧值不相同才会修改
+      } else if (hasChanged(value, oldValue)) {
+        // 如果新值和旧值不相同才会修改
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
@@ -275,6 +294,8 @@ function has(target: object, key: string | symbol): boolean {
 }
 
 function ownKeys(target: object): (string | number | symbol)[] {
+  // 被 for in 遍历的时候 会给对象设置一个特殊的key  ITERATE_KEY 作为标识 收集当前的依赖
+  // 如果呗for in遍历的是数组 则会收集数组 length 对应的effect
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }

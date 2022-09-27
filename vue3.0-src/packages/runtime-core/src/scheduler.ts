@@ -34,7 +34,7 @@ let isFlushPending = false
 const queue: SchedulerJob[] = []
 let flushIndex = 0
 
-// 队列任务执行完后执行的回调函数队列 
+// 队列任务执行完后执行的回调函数队列
 const pendingPreFlushCbs: SchedulerCb[] = []
 let activePreFlushCbs: SchedulerCb[] | null = null
 let preFlushIndex = 0
@@ -59,7 +59,7 @@ export function nextTick(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
- // 异步更新队列
+// 异步更新队列
 export function queueJob(job: SchedulerJob) {
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
@@ -67,7 +67,7 @@ export function queueJob(job: SchedulerJob) {
   // if the job is a watch() callback, the search will start with a +1 index to
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
-  // 如果更新队列为空 或者 该队列不存在当前的更新effect 
+  // 如果更新队列为空 或者 该队列不存在当前的更新effect
   // 将该effect 推入更新队列
 
   if (
@@ -150,7 +150,6 @@ export function flushPreFlushCbs(
   if (pendingPreFlushCbs.length) {
     currentPreFlushParentJob = parentJob
 
-    
     activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
     pendingPreFlushCbs.length = 0
     if (__DEV__) {
@@ -176,7 +175,6 @@ export function flushPreFlushCbs(
 
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
-
     // 复制一份postcbs后清空
     // 可能某些回调函数的执行会再次修改 postFlushCbs，
     // 所以拷贝一个副本循环遍历则不会受到 postFlushCbs 修改的影响
@@ -216,7 +214,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 const getId = (job: SchedulerJob | SchedulerCb) =>
   job.id == null ? Infinity : job.id
 
-  // 清空异步任务
+// 清空异步任务
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
   isFlushing = true
@@ -271,7 +269,7 @@ function flushJobs(seen?: CountMap) {
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
   // 检测循环更新
   // 每次flushjobs 一开始就创建了一个seen
-  // flushcbs的时候回忘seen中添加， 记录医用计数 count 如果在一个tick内
+  // flushcbs的时候回忘seen中添加， 记录计数 count 如果在一个tick内
   // 添加超过 RECURSION_LIMIT 的次数就会警告
   if (!seen.has(fn)) {
     seen.set(fn, 1)

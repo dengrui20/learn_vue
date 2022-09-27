@@ -19,6 +19,7 @@ function compileToFunction(
 ): RenderFunction {
   if (!isString(template)) {
     if (template.nodeType) {
+      // 如果是一个node节点
       template = template.innerHTML
     } else {
       __DEV__ && warn(`invalid template option: `, template)
@@ -27,6 +28,7 @@ function compileToFunction(
   }
 
   const key = template
+  // 缓存模板 防止重复编译
   const cached = compileCache[key]
   if (cached) {
     return cached

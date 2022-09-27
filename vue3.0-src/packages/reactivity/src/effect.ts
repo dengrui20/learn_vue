@@ -163,7 +163,7 @@ export function resetTracking() {
 // 收集依赖
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
-      return
+    return
   }
   // 在映射表里找到 当前的值有没有对应的effect
   let depsMap = targetMap.get(target)
@@ -233,6 +233,18 @@ export function trigger(
     // effectsToAdd => [effect1, effect2]
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
+        // 现在正在执行的effect 就是当前需要执行的effect 则不会加入到执行队列
+        /**
+          let state = reactive({age: 1})
+          effect(effectFn1() => {
+            state.age++
+          })
+          state.age++ 执行的之后会触发当前的 effectFn1
+          activeEffect 就赋值为 effectFn1
+          effectFn1 然后执行 里面的 state.age++
+          这时候又触发了执行 effectFn1 === activeEffect
+          所以要排除这种递归执行的情况 避免无限递归
+        */
         if (effect !== activeEffect || effect.allowRecurse) {
           // 添加到执行队列里面
           effects.add(effect)
@@ -249,8 +261,10 @@ export function trigger(
     // 如果修改的是数组的长度， 需要通知数组的每一值对应的effect更新
     depsMap.forEach((dep, key) => {
       //  dep => [effect] Set
-      // 如果修改长度 并且新长度小于原始长度 也要通知effect
+      // 如果修改长度 并且新长度小于原始长度 也要通知length 对应的 effect执行
       if (key === 'length' || key >= (newValue as number)) {
+        // key>=newVal
+        // arr = [1,2,3,4,5] 的length 修改为了3 那么只有下标大于 3的元素 才会触发对应的effect执行
         add(dep)
       }
     })
@@ -262,13 +276,24 @@ export function trigger(
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET
-    // 执行 iteration的key
+    // 执行 iteration 的key 如 for in | for of | forEach
     switch (type) {
       // 新增属性
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
           // 如果不是数组
-          add(depsMap.get(ITERATE_KEY)) // ??????
+          /***
+           *  对象在for in遍历的时候
+           *  effect(() => {
+           *    for(let key in obj) {  }
+           * })
+           * 由于读取了响应对象的值
+           * 会针对for in 这个读取操作 为对象设置一个特殊的key作为标识 ITERATE_KEY 收集这个值的对应的effect
+           * 当对对象进行添加新值的操作时 会触发 ITERATE_KEY 对应的 effect 如果只是修改, 则不会触发 因为遍历key 的数量不会变
+           * delete 的时候同理
+           *
+           */
+          add(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
             add(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
@@ -289,6 +314,8 @@ export function trigger(
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
+          // 如果对 Map类型的值 进行修改 则触发 map对象 forEach 对应的effect
+          // 因为forEach 执行时一般情况下会在意值是否改变
           add(depsMap.get(ITERATE_KEY))
         }
         break
