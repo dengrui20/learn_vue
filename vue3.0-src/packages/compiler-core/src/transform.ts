@@ -389,6 +389,7 @@ export function traverseNode(
   const { nodeTransforms } = context
   const exitFns = []
   for (let i = 0; i < nodeTransforms.length; i++) {
+    // 如果该转换函数有退出函数在转换完成后执行
     const onExit = nodeTransforms[i](node, context)
     if (onExit) {
       if (isArray(onExit)) {
@@ -399,15 +400,18 @@ export function traverseNode(
     }
     if (!context.currentNode) {
       // node was removed
+      // 节点被移除
       return
     } else {
       // node may have been replaced
+      // 转换的过程中 节点被替换 恢复到之前的节点
       node = context.currentNode
     }
   }
 
   switch (node.type) {
     case NodeTypes.COMMENT:
+      // 导入createCommont 辅助函数
       if (!context.ssr) {
         // inject import for the Comment symbol, which is needed for creating
         // comment nodes with `createVNode`
@@ -416,6 +420,7 @@ export function traverseNode(
       break
     case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper
+      // 导入toString 辅助函数
       if (!context.ssr) {
         context.helper(TO_DISPLAY_STRING)
       }
@@ -423,6 +428,7 @@ export function traverseNode(
 
     // for container types, further traverse downwards
     case NodeTypes.IF:
+      // 递归遍历分支节点
       for (let i = 0; i < node.branches.length; i++) {
         traverseNode(node.branches[i], context)
       }
@@ -431,6 +437,7 @@ export function traverseNode(
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
     case NodeTypes.ROOT:
+      // 遍历子节点
       traverseChildren(node, context)
       break
   }

@@ -214,6 +214,7 @@ export function renderComponentRoot(
     }
   } catch (err) {
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
+    // 渲染出错 则渲染一个注释节点
     result = createVNode(Comment)
   }
   currentRenderingInstance = null

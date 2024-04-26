@@ -1357,6 +1357,7 @@ function baseCreateRenderer(
   // 组件更新
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
     const instance = (n2.component = n1.component)!
+    debugger
     if (shouldUpdateComponent(n1, n2, optimized)) {
       // 根据新旧子组件 vnode 判断是否需要更新子组件
       if (
@@ -1370,6 +1371,7 @@ function baseCreateRenderer(
           pushWarningContext(n2)
         }
         // 在组件更新之前先更新组件的属性 如props slot...
+
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -1551,6 +1553,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
+        // 缓存旧的子树vnode
         const prevTree = instance.subTree
         instance.subTree = nextTree
 
@@ -2021,8 +2024,9 @@ function baseCreateRenderer(
            */
           newIndexToOldIndexMap[newIndex - s2] = i + 1
           if (newIndex >= maxNewIndexSoFar) {
+            // maxNewIndexSoFar 存储的是上次的newIndex 如果没有递增 说明有移动
             // 找到 新节点里面乱序比对数组里最大的索引
-            // 遍历oldVnode 找到 oldVnode 在新
+            // 遍历oldVnode 找到 oldVnode 在新 newNode的索引
             /**
               如
                 w [ a  b  c  d ] f  g => 
@@ -2076,7 +2080,7 @@ function baseCreateRenderer(
         : EMPTY_ARR
       j = increasingNewIndexSequence.length - 1
       // looping backwards so that we can use last patched node as anchor
-      // 向后循环，以便我们可以使用最后一个修补节点作为锚点
+      // 倒序遍历，以便我们可以使用最后一个修补节点作为锚点
       // 循环遍历新的乱序节点 从后往前依次遍历
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
@@ -2089,6 +2093,8 @@ function baseCreateRenderer(
           当前从新节点的  e 开始遍历 找到下一个节点
           下一个节点为 f  如果没有下一个节点 就是直接往尾部加入节点
       */
+        // nextIndex 当前遍历节点的下标
+        // 如果当前节点的下标 小于 新节点的长度 则把下一个节点作为锚点
         const anchor =
           nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {

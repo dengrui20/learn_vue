@@ -563,12 +563,14 @@ function setupStatefulComponent(
     }
   }
   // 0. create render proxy property access cache
+  // 缓存需要 代理的属性
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
   // 创建公共实例/渲染代理也将其标记为原始，这样就不会观察到它
   // 用户 render里的回调参数
   // options api 里面的this
+  // 对 instance.ctx 的部分属性 做代理
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)

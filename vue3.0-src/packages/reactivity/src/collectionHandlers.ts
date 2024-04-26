@@ -95,10 +95,10 @@ function set(this: MapTypes, key: unknown, value: unknown) {
    * 防止把响应的数据设置到原始数据上造成数据污染
    *
    * const m = new Map()
-   * const p = reactive(m)
+   * const p1 = reactive(m)
    * const p2 = reactive(new Map())
    * p1.set('p2', p2)
-   * effect(() => console.log(p1.gey('p2').size))
+   * effect(() => console.log(p1.get('p2').size))
    * m.get('p2').set('a', 1)
    * 最后 会触发effect   m作为一个未响应的值 不应触发
    * 原因是p1.set('p2', p2)时候 p2作为一个响应的值直接赋值给了m

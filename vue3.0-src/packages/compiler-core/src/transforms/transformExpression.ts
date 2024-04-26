@@ -98,6 +98,17 @@ export function processExpression(
   // v-on handler values may contain multiple statements
   asRawStatements = false
 ): ExpressionNode {
+  /* 
+    processExpression的过程有一定的成本 
+    内部依赖了@babel/parser库去解析表达式生成ast节点
+    并且依赖了estree-walker库遍历ast节点
+    然后分析判断加前缀 生成表达式
+    但是@babel/parser 一般在node端用的 库本身体积非常大
+    一般不会再web端引入这个库, web 运行时编译仍然用vue2中的with
+    但是本地离线编译生成的render会直接加前缀比如 {{ a + b}} 会变成 _ctx.a + _ctx.b
+    由于编译过程是离线的所以无所谓编译成本
+  */
+
   if (__BROWSER__) {
     if (__DEV__) {
       // simple in-browser validation (same logic in 2.x)

@@ -62,6 +62,9 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
+  // 创建一个代码生成节点 这个节点多了很多编译优化相关的属性
+  // 代码生成节点 根据这个节点对象生成代码
+
   if (
     !(
       node.type === NodeTypes.ELEMENT &&
@@ -125,6 +128,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // children
     if (node.children.length > 0) {
+      // 把keep-alive试做一个block
       if (vnodeTag === KEEP_ALIVE) {
         // Although a built-in component, we compile KeepAlive with raw children
         // instead of slot functions so that it can be used inside Transition
@@ -154,6 +158,7 @@ export const transformElement: NodeTransform = (node, context) => {
         vnodeTag !== KEEP_ALIVE
 
       if (shouldBuildAsSlots) {
+        // 如果组件有children 则处理插槽
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         vnodeChildren = slots
         if (hasDynamicSlots) {

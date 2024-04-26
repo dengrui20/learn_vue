@@ -71,6 +71,7 @@ export function defineAsyncComponent<
   const load = (): Promise<ConcreteComponent> => {
     let thisRequest: Promise<ConcreteComponent>
     return (
+      // 缓存loader 多次调用只请求一次
       pendingRequest ||
       (thisRequest = pendingRequest = loader()
         .catch(err => {
@@ -98,6 +99,7 @@ export function defineAsyncComponent<
             )
           }
           // interop module default
+          // export default 导出方式
           // 组件加载成功
           if (
             comp &&

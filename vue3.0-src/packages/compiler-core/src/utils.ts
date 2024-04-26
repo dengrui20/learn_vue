@@ -110,6 +110,7 @@ export function advancePositionWithMutation(
   let linesCount = 0
   let lastNewLinePos = -1
   for (let i = 0; i < numberOfCharacters; i++) {
+    // 匹配换行符
     if (source.charCodeAt(i) === 10 /* newline char code */) {
       linesCount++
       lastNewLinePos = i
@@ -122,7 +123,6 @@ export function advancePositionWithMutation(
     lastNewLinePos === -1
       ? pos.column + numberOfCharacters
       : numberOfCharacters - lastNewLinePos
-
   return pos
 }
 

@@ -88,6 +88,7 @@ async function build(target) {
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
     (devOnly ? 'development' : 'production')
+
   await execa(
     'rollup',
     [

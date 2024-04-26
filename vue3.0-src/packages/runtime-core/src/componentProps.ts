@@ -187,9 +187,11 @@ export function updateProps(
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
   ) {
+    // 开启了编译优化 再在编译阶段会获取到所有动态的props
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
       // the props.
+      // 只更新动态节点
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         const key = propsToUpdate[i]
@@ -455,6 +457,11 @@ export function normalizePropsOptions(
 
           // prop['shouldCastTrue'] = true || false
           // 如果同时配置了 只 配置 Boolean 没有配置 String 或者 booleanIndex在 stringIndex 前面
+          /**
+           * props: { isBoolean: [ Boolean, String ] }
+            没有传defaul  prop = false
+            但是第二个为String 如果没有传值 或者传了字符串 prop = true
+           */
           prop[BooleanFlags.shouldCastTrue] =
             stringIndex < 0 || booleanIndex < stringIndex
           // if the prop needs boolean casting or default value

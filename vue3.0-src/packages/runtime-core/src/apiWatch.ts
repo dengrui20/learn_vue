@@ -182,6 +182,7 @@ function doWatch(
 
   // 2. watch(state.count,(count, prevCount) => {}) 的情况
   if (isRef(source)) {
+    // 如果原数据是一个ref类型
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
   } else if (isReactive(source)) {
@@ -207,6 +208,7 @@ function doWatch(
       })
   } else if (isFunction(source)) {
     // 1. watch(() => state.count,(count, prevCount) => {})
+
     if (cb) {
       // getter with cb
       // getter => () => state.count
@@ -217,6 +219,7 @@ function doWatch(
     } else {
       // no cb -> simple effect
       // watchEffect 会进入这里
+      //  watchEffect(() => console.log(state))
       getter = () => {
         if (instance && instance.isUnmounted) {
           return

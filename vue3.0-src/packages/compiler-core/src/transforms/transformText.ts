@@ -29,6 +29,7 @@ export const transformText: NodeTransform = (node, context) => {
       let hasText = false
 
       for (let i = 0; i < children.length; i++) {
+        // 相邻文本节点合并
         const child = children[i]
         if (isText(child)) {
           hasText = true
@@ -36,6 +37,7 @@ export const transformText: NodeTransform = (node, context) => {
             const next = children[j]
             if (isText(next)) {
               if (!currentContainer) {
+                // 创建复合表达式
                 currentContainer = children[i] = {
                   type: NodeTypes.COMPOUND_EXPRESSION,
                   loc: child.loc,
@@ -43,6 +45,7 @@ export const transformText: NodeTransform = (node, context) => {
                 }
               }
               // merge adjacent text node into current
+              // 合并节点
               currentContainer.children.push(` + `, next)
               children.splice(j, 1)
               j--

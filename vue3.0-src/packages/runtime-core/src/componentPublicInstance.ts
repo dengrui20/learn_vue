@@ -275,8 +275,21 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    /**
+     * 这个getter在渲染过程中对渲染上下文的每个属性访问都会被调用，
+      它是一个主要的热点。
+      其中最昂贵的部分是多次hasOwn（）调用。
+      对普通对象进行简单的属性访问要快得多，
+      所以我们使用accessCache对象（具有null原型）来记忆键对应的访问类型。
+      下面要判断访问的key是不是该props/ctx/data/setup是否存在这个key
+      每次需要通过调用 hasOwn 这样开销太大,
+      只需要第一次访问的时候分配一个类型 如果这个key存在对应的来源类型则直接返值
+      否则走后面的逻辑
+      accessCache 缓存的就是每个属性对应的来源类型
+     */
     let normalizedProps
     if (key[0] !== '$') {
+      // 从缓存中获取属性
       const n = accessCache![key]
       if (n !== undefined) {
         switch (n) {

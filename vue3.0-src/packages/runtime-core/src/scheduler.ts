@@ -75,6 +75,30 @@ export function queueJob(job: SchedulerJob) {
       !queue.includes(
         job,
         isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
+        // 如果允许递归 则index + 1 从下一个开始检索 允许递归触发自己
+        /**
+        比如执行某个job的时候因为某种原因有触发了这个job 如果
+        从flushIndex检索会发现已经存在不会再添加到任务队列里
+        比如在父组件更新了响应式数据 a   a作为props传个子组件 子组件监听了props 设置了watch
+        watch-cb 回调触发了修改父组件的依赖数据 a
+        
+        父组件更新数据时父组件的渲染update 
+        ****** queue = [ parent-update ]
+        开始执行queue队列 更新父组件
+        父组件更新的过程中也更新了组组件的props  由于props是响应的
+        触发了子组件的pre-watch ，pre-watch的回调cb会推入到pre-queue
+        在子组件 添加一个pre类型的watch
+         ****** queue = [ parent-update ]
+                pre-queue = [ watch-cb ]
+        父组件再更新props时(执行updateComponentPreRender) 会同步的执行并情况pre-queue队列(flushPreFlushCbs)
+        这时就会执行watch-cb 
+        然后触发回调cb 由于回调cb里修改了父组件的依赖数据 则又会把父组件的upate推入queue队列
+        ****** queue = [ parent-update ] <-  parent-update
+                pre-queue = [ watch-cb ]
+        但是这个时候 父组件的parent-update还未执行完成 整个队列还未清空(整个异步队列执行完成才会清空)
+        但是parent-update已经再队列中不会添加
+        这样会导致父组件不更新 不符合预期
+        */
       )) &&
     job !== currentPreFlushParentJob
   ) {
@@ -269,7 +293,7 @@ function flushJobs(seen?: CountMap) {
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
   // 检测循环更新
   // 每次flushjobs 一开始就创建了一个seen
-  // flushcbs的时候回忘seen中添加， 记录计数 count 如果在一个tick内
+  // flushcbs的时候会往seen中添加， 记录计数 count 如果在一个tick内
   // 添加超过 RECURSION_LIMIT 的次数就会警告
   if (!seen.has(fn)) {
     seen.set(fn, 1)

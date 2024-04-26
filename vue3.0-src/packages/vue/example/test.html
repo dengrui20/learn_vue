@@ -21,7 +21,7 @@
 
     console.log(compile(`<input type="text" v-model="xxx" />`))
 
-   
+
     let vm = createApp({
       template: `
         <div>
@@ -94,13 +94,16 @@
       },
       setup(props, { emit }) {
         let state = reactive({ radio: 1 })
-        watch(() => state.radio, () => {
-          console.log(state.radio)
+        watch(() => props.count, () => {
+          debugger
+          console.log('pre')
+        }, {
+          flush: 'pre'
         })
         return {
           state,
           changeParentCount(e) {
-            emit('update:count',e.target.value)
+            emit('update:count', e.target.value)
           }
         }
       }

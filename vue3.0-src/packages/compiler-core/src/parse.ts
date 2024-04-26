@@ -87,6 +87,7 @@ export function baseParse(
   content: string,
   options: ParserOptions = {}
 ): RootNode {
+  // 创建解析上下文
   const context = createParserContext(content, options)
   /**
    * 
@@ -137,7 +138,8 @@ function parseChildren(
   ancestors: ElementNode[]
 ): TemplateChildNode[] {
   // ancestors一个节点栈 <div><p><span></span></p></div> [div, p, span]
-  const parent = last(ancestors)
+
+  const parent = last(ancestors) // 找到父节点
   const ns = parent ? parent.ns : Namespaces.HTML
   const nodes: TemplateChildNode[] = []
   while (!isEnd(context, mode, ancestors)) {
@@ -155,6 +157,7 @@ function parseChildren(
         // DATA模式 并且已 '<' 开头
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
+          // 长度只有1  说明以 < 结尾  警告
           emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
         } else if (s[1] === '!') {
           // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
@@ -179,13 +182,18 @@ function parseChildren(
         } else if (s[1] === '/') {
           // 解析闭合标签
           // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
+
           if (s.length === 2) {
+            // 长度为2 说明是 </
             emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
           } else if (s[2] === '>') {
+            //  以 </> 开始
             emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
             advanceBy(context, 3)
             continue
           } else if (/[a-z]/i.test(s[2])) {
+            // </a 开头
+            // 处理多余的结束标签
             emitError(context, ErrorCodes.X_INVALID_END_TAG)
             parseTag(context, TagType.End, parent)
             continue
@@ -213,6 +221,7 @@ function parseChildren(
       }
     }
     if (!node) {
+      // 文本节点
       node = parseText(context, mode)
     }
 
@@ -233,13 +242,14 @@ function parseChildren(
       const node = nodes[i]
       if (!context.inPre && node.type === NodeTypes.TEXT) {
         if (!/[^\t\r\n\f ]/.test(node.content)) {
+          // 匹配空白字符
           const prev = nodes[i - 1]
           const next = nodes[i + 1]
           // If:
-          // - the whitespace is the first or last node, or:
-          // - the whitespace is adjacent to a comment, or:
-          // - the whitespace is between two elements AND contains newline
-          // Then the whitespace is ignored.
+          // - the whitespace is the first or last node, or:  如果空白字符是开头或者结尾节点
+          // - the whitespace is adjacent to a comment, or:  或者空白字符与注释节点相连
+          // - the whitespace is between two elements AND contains newline  或者额空白节点在2个元素之间并且包含换行符
+          // Then the whitespace is ignored.  那么这些空白字符节点都应该被移除
           if (
             !prev ||
             !next ||
@@ -250,13 +260,16 @@ function parseChildren(
               /[\r\n]/.test(node.content))
           ) {
             removedWhitespace = true
+            // 清除标记
             nodes[i] = null as any
           } else {
             // Otherwise, condensed consecutive whitespace inside the text
             // down to a single space
+            // 压缩所有空白字符变成一个空格
             node.content = ' '
           }
         } else {
+          // 把空白空间替换成一个空格
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
@@ -266,6 +279,7 @@ function parseChildren(
         node.type === NodeTypes.COMMENT &&
         !context.options.comments
       ) {
+        // 移除生产环境注释节点
         removedWhitespace = true
         nodes[i] = null as any
       }
@@ -279,7 +293,7 @@ function parseChildren(
       }
     }
   }
-
+  // node 过滤掉清除标记的节点
   return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
@@ -330,25 +344,35 @@ function parseComment(context: ParserContext): CommentNode {
   let content: string
 
   // Regular comment.
+  // 注释结束匹配 =>  -->
   const match = /--(\!)?>/.exec(context.source)
   if (!match) {
+    // 没有匹配到结束符
     content = context.source.slice(4)
     advanceBy(context, context.source.length)
     emitError(context, ErrorCodes.EOF_IN_COMMENT)
   } else {
     if (match.index <= 3) {
+      // <!-- -->  注释结束索引小于等于3 格式不正确
       emitError(context, ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT)
     }
     if (match[1]) {
+      // 结束符不正确 <!-- --!>
+
       emitError(context, ErrorCodes.INCORRECTLY_CLOSED_COMMENT)
     }
+    // 获取注释内容
     content = context.source.slice(4, match.index)
 
     // Advancing with reporting nested comments.
+    // 截取到注释结尾的代码
     const s = context.source.slice(0, match.index)
     let prevIndex = 1,
       nestedIndex = 0
+
     while ((nestedIndex = s.indexOf('<!--', prevIndex)) !== -1) {
+      // 嵌套注释  注释内容中又匹配到了 <!--
+      // 将代码前进道注释结束符 后
       advanceBy(context, nestedIndex - prevIndex + 1)
       if (nestedIndex + 4 < s.length) {
         emitError(context, ErrorCodes.NESTED_COMMENT)
@@ -396,15 +420,22 @@ function parseElement(
   __TEST__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
+
+  // 是否在pre标签内
   const wasInPre = context.inPre
+  // 是否在 v-pre内
   const wasInVPre = context.inVPre
+  // 获取当前节点的父标签节点
   const parent = last(ancestors)
   // 解析标签 及其 属性
   const element = parseTag(context, TagType.Start, parent)
+  // 是否在pre标签的边界
   const isPreBoundary = context.inPre && !wasInPre
+  // 是否在 v-pre 指令的边界
   const isVPreBoundary = context.inVPre && !wasInVPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
+    // 如果是自闭合标签 直接返回标签节点
     return element
   }
 
@@ -412,7 +443,7 @@ function parseElement(
   // 将编译好的节点推入节点栈
   ancestors.push(element)
   const mode = context.options.getTextMode(element, parent)
-  // 编译子节点
+  // 递归编译子节点
   const children = parseChildren(context, mode, ancestors)
   // 将该节点退出节点栈
   ancestors.pop()
@@ -420,7 +451,7 @@ function parseElement(
 
   // End tag.
   if (startsWithEndTagOpen(context.source, element.tag)) {
-    // 编译关闭标签
+    // 解析结束 标签
     parseTag(context, TagType.End, parent)
   } else {
     emitError(context, ErrorCodes.X_MISSING_END_TAG, 0, element.loc.start)
@@ -432,6 +463,7 @@ function parseElement(
     }
   }
 
+  // 更新代码位置
   element.loc = getSelection(context, element.loc.start)
 
   if (isPreBoundary) {
@@ -479,7 +511,7 @@ function parseTag(
   advanceSpaces(context)
 
   // save current state in case we need to re-parse attributes with v-pre
-  const cursor = getCursor(context)
+  const cursor = getCursor(context) // 保存当前状态 避免重新解析v-pres属性
   const currentSource = context.source
 
   // Attributes.
@@ -493,6 +525,7 @@ function parseTag(
   }
 
   // check v-pre
+  // 检查 是否是 v-pre
   if (
     !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
@@ -502,6 +535,7 @@ function parseTag(
     extend(context, cursor)
     context.source = currentSource
     // re-parse attrs and filter out v-pre itself
+    // 重新解析属性 并且吧 v-pre过滤掉
     props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
   }
 
@@ -835,9 +869,9 @@ function parseInterpolation(
   advanceBy(context, close.length)
 
   return {
-    type: NodeTypes.INTERPOLATION,
+    type: NodeTypes.INTERPOLATION, // 插值节点
     content: {
-      type: NodeTypes.SIMPLE_EXPRESSION,
+      type: NodeTypes.SIMPLE_EXPRESSION, // 表达式节点
       isStatic: false,
       // Set `isConstant` to false by default and will decide in transformExpression
       constType: ConstantTypes.NOT_CONSTANT,
@@ -859,6 +893,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   let endIndex = context.source.length
   for (let i = 0; i < endTokens.length; i++) {
     const index = context.source.indexOf(endTokens[i], 1)
+    // 找到插值符号 或者 < 就结束
     if (index !== -1 && endIndex > index) {
       endIndex = index
     }
@@ -931,7 +966,9 @@ function startsWith(source: string, searchString: string): boolean {
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   const { source } = context
   __TEST__ && assert(numberOfCharacters <= source.length)
+  // 更新context的 offset line column 信息
   advancePositionWithMutation(context, source, numberOfCharacters)
+  // 更新source
   context.source = source.slice(numberOfCharacters)
 }
 
